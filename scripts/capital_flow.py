@@ -64,7 +64,7 @@ def _safe_call(fn, **kwargs) -> pd.DataFrame:
         df = fn(**kwargs)
         return df if df is not None else pd.DataFrame()
     except Exception as e:
-        print(f"[WARN] {fn.__name__} 失败: {e}")
+        print(f"[WARN] {getattr(fn, '__name__', getattr(fn, 'func', fn).__name__)} 失败: {e}")
         return pd.DataFrame()
 
 
