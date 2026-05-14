@@ -38,6 +38,23 @@
    - 关键上下文输入路径(主报告 / artifacts dir)
    - 上轮历史摘要(判定 + FIX 列表 / 已修改文件路径)
 
+### ★ 路径规则(v5.1.5 新增 — 消除相对路径问题)
+
+Sub-agent 的工作目录**不可预测**,因此:
+
+1. **主 agent 在调度前**,用 Bash 获取 skill root 绝对路径:
+   ```bash
+   SKILL_ROOT=$(cd /Users/michaelfei_0/.claude/skills/stock-analyze && pwd)
+   ```
+2. **所有 sub-agent prompt 中的文件路径必须使用绝对路径**,例如:
+   ```
+   - data_snapshot: ${SKILL_ROOT}/output/{company}/data_snapshot.md
+   - phase1-data: ${SKILL_ROOT}/output/{company}/phase1-data.md
+   - agent 指令: ${SKILL_ROOT}/agents/phase3-part2.md
+   ```
+3. **禁止在 prompt 中使用 `output/{company}/...` 等相对路径** — 这在之前的实际运行中已导致 sub-agent "文件全部不存在" 的错误并浪费一次 fresh-restart
+4. 同样,`python3 -m scripts.xxx` 命令前应加 `cd ${SKILL_ROOT} &&` 确保脚本能找到 `output/` 目录
+
 ### 示例: Phase 6 reviewer Round 2
 
 ```python

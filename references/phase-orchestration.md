@@ -54,6 +54,7 @@
 
 1. 用 Agent 工具启动 `phase3-part{N}`:
    - prompt 含 `output_dir / company / date / type / market / ticker / amount`
+   - **★ 所有文件路径必须用绝对路径**（见 agent-protocol.md §2 路径规则）
 2. 等响应,用 Bash `grep "^\*\*判定\*\*:" response` 提取判定
 3. **判定 = PASS / 部分降级** → 进下一个 part
 4. **判定 = FAIL** → fresh-restart 同一 subagent_type(不是 Resume!):
@@ -85,7 +86,7 @@
 主 agent 加载 `phases/phase6-review-publish.md` Part A 流程,然后跑:
 
 ```bash
-python3 -m scripts.anti_lazy_lint output/{company}/{company}-analysis-{date}.md
+python3 -m scripts.anti_lazy_lint --md output/{company}/{company}-analysis-{date}.md
 ```
 
 退出码 0 → 进 Part A.5;退出码 1 → 主 agent Edit 修对应 part,重 assemble,重跑 lint,最多 3 次。
@@ -142,7 +143,8 @@ python3 -m scripts.anti_lazy_lint output/{company}/{company}-analysis-{date}.md
 ### Part B: HTML 生成
 
 ```bash
-python3 -m scripts.build_html --md output/{company}/{company}-analysis-{date}.md \
+python3 -m scripts.build_html --company "{company}" --ticker "{ticker}" \
+    --md output/{company}/{company}-analysis-{date}.md \
     --out output/{company}/{date}.html
 ```
 
