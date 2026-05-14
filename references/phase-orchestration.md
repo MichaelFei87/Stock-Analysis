@@ -1,6 +1,11 @@
-# Phase 调度详细 Checklist (v5.1.4)
+# Phase 调度详细 Checklist
 
 > 本文件由主智能体在 Step 3 加载,详细说明每个 Phase 的调度顺序、工具调用方式、判定标准。SKILL.md 只引用本文件不重复。
+>
+> **数据优先级**:
+> - **A 股**: `Tushare > yfinance > PDF 原文 > Web Search`
+> - **港股/美股**: `yfinance > PDF 原文 > Web Search`
+> - 财务数字始终取最新 fiscal year 的结构化数据（Tushare/yfinance），PDF 用于补充定性内容
 >
 > **关键设计**(对照 v5.1.x 失败教训):
 > - ❌ **不使用 `Agent(resume=...)` 参数** — 该参数不存在,Agent 工具实际 schema 仅含 description/isolation/model/prompt/run_in_background/subagent_type
@@ -30,11 +35,12 @@
 
 **调度 checklist**:
 
-1. 主 agent 读 `pdfs/*.pdf` + `pdf_sections_*.json`
-2. 精读 6 个高价值 section(income_statement_changes / subsidiaries / MD&A / 风险因素 / 非经常性损益 / 关联交易)
-3. 写 `output/{company}/phase2-documents.md`
+1. **★ 时效性比对**: 读 `phase1-data.md`,比较 yfinance 最新 fiscal year vs PDF fiscal year。若 PDF 过期,在 `phase2-documents.md` 开头标注,后续精读只提取定性内容
+2. 主 agent 读 `pdfs/*.pdf` + `pdf_sections_*.json`
+3. 精读 6 个高价值 section(income_statement_changes / subsidiaries / MD&A / 风险因素 / 非经常性损益 / 关联交易)
+4. 写 `output/{company}/phase2-documents.md`
 
-**质量门控**:§2 利润表变动 ≥ 3 行原文引用;每份 PDF 都被列出
+**质量门控**:§2 利润表变动 ≥ 3 行原文引用;每份 PDF 都被列出;时效性比对结果已标注
 
 ---
 

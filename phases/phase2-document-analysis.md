@@ -1,8 +1,8 @@
-# Phase 2: 文档精析（v4 - PDF 必读）
+# Phase 2: 文档精析（yfinance 时效性感知）
 
 > **🧭 你在这里**：[SKILL.md 协调器](../SKILL.md) → Phase 1 → **Phase 2 文档精析** → Phase 3 综合分析
 >
-> **接收自**: Phase 1 的 `raw_data/pdfs/` + `pdf_sections_*.json`
+> **接收自**: Phase 1 的 `raw_data/pdfs/` + `pdf_sections_*.json` + `phase1-data.md`
 > **输出给**: Phase 3（主报告引用 `§2 利润表变动原因`、`§3 子公司业绩`、`§8 高价值事实锚点`）
 > **质量门控**: §2 利润表变动 ≥3 行原文引用；§8 高价值事实锚点 ≥5 条
 
@@ -31,7 +31,22 @@
 
 ---
 
-## Step 1: 盘点已有 PDF
+## Step 1: 时效性比对 + 盘点已有 PDF
+
+### ★ 1.0 yfinance vs PDF 时效性比对
+
+**在精读 PDF 之前**，先读 `phase1-data.md`，确认：
+1. yfinance `financials` 最新 fiscal year（如 FY2025）
+2. 已下载 PDF 的 fiscal year（如 FY2024）
+
+**若 PDF fiscal year < yfinance fiscal year**：
+- 在 `phase2-documents.md` 开头标注：`⚠️ PDF 年报 FY{X} 比 yfinance 结构化数据 FY{Y} 旧一期。财务数字以 yfinance FY{Y} 为准，PDF 仅用于提取定性内容（管理层讨论、分部明细、变动原因等）。`
+- 精读 PDF 时 **不提取财务数字**（那些已过期），只提取：管理层讨论与分析、业务分部描述、战略方向、风险因素、关联交易等定性信息
+- Phase 3 写报告时，财务数据引用 `[yfinance:financials]`，定性内容引用 `[PDF:annual_XXXX,P.X]`
+
+**若 PDF fiscal year ≥ yfinance fiscal year**：正常精读，PDF 为主源。
+
+### 1.1 盘点已有 PDF
 
 列出 `output/{company}/raw_data/pdfs/` 下所有 PDF 文件及其对应的 section JSON。
 
