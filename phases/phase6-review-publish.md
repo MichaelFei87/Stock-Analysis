@@ -231,8 +231,7 @@ Step 5: 自检 (v4.6 更新):
 
 4. ★ 自动更新主页卡片数据(v4.6 替换旧的"手工编辑 index.html"):
    python3 -m scripts.update_index --company {company} \
-       --repo /tmp/Inves-Report-v2 \
-       --force
+       --repo /tmp/Inves-Report-v2
 
    这会:
    - 解析主报告 MD 的 <!-- CARD_METADATA / RATING_TRIO_DATA / KEY_METRICS_SIDEBAR --> 结构化注释块

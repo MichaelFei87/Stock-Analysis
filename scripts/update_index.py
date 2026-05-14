@@ -16,7 +16,7 @@ Usage:
 
     # 强制覆盖现有报告 (by ticker match)
     python3 -m scripts.update_index --company 实丰文化 \\
-        --repo /tmp/Inves-Report-v2 --force
+        --repo /tmp/Inves-Report-v2
 """
 from __future__ import annotations
 
@@ -80,14 +80,23 @@ def _infer_tone(verdict: str, score: float | None) -> str:
 
 def _detect_market(ticker: str, company_name: str) -> str:
     t = (ticker or "").upper()
-    if ".SH" in t or ".SZ" in t or ".BJ" in t or re.match(r"^\d{6}", t):
+    # 带后缀的优先精确匹配
+    if re.search(r"\.(SH|SZ|BJ)$", t):
         return "a"
-    if ".HK" in t or re.match(r"^0\d{3,4}\.HK", t, re.I):
+    if re.search(r"\.HK$", t):
         return "hk"
-    if ".US" in t or re.match(r"^[A-Z]{1,5}$", t):
+    if re.search(r"\.US$", t):
         return "us"
-    # 一级市场(非上市公司名)
-    return "pe"
+    # 无后缀 fallback: 6位纯数字 → A股
+    if re.match(r"^\d{6}$", t):
+        return "a"
+    # 4-5位纯数字 → 港股
+    if re.match(r"^\d{4,5}$", t):
+        return "hk"
+    # 1-5位纯字母 → 美股 (仅在有 ticker 时)
+    if t and re.match(r"^[A-Z]{1,5}$", t):
+        return "us"
+    return "unknown"
 
 
 # ---------- 元数据提取 ----------
@@ -132,8 +141,12 @@ def _slug_from_company(company_name: str, ticker: str) -> str:
     }
     if company_name in known:
         return known[company_name]
-    # fallback: ticker_company
-    clean_ticker = re.sub(r"\.(SH|SZ|BJ|HK|US)$", "", ticker or "X", flags=re.I)
+    # fallback: ticker_company — ticker 必须有效(非空且非纯符号)
+    clean_ticker = re.sub(r"\.(SH|SZ|BJ|HK|US)$", "", ticker or "", flags=re.I).strip()
+    if not clean_ticker:
+        # ticker 缺失时用公司名拼音首字母或直接用中文名,避免 X_ 前缀
+        print(f"[WARN] ticker 为空,slug 使用公司名: {company_name}")
+        return company_name
     return f"{clean_ticker}_{company_name}"
 
 
@@ -183,6 +196,21 @@ def extract_metadata(md_path: Path, company_name: str) -> CardMetadata:
         tm = re.search(r"\b(\d{6}\.(SH|SZ|BJ)|[A-Z]{1,5}\.US|\d{1,5}\.HK|\d{6})\b", title)
         if tm:
             meta.ticker = tm.group(1)
+
+    # fallback 2: CARD_METADATA 块中的 ticker 字段
+    if not meta.ticker and card_block.get("ticker"):
+        meta.ticker = card_block["ticker"].strip()
+        print(f"[INFO] ticker 从 CARD_METADATA 块提取: {meta.ticker}")
+
+    # fallback 3: 全文搜索带后缀的 ticker
+    if not meta.ticker:
+        tm_full = re.search(r"\b(\d{6}\.(SH|SZ|BJ)|[A-Z]{1,5}\.US|\d{1,5}\.HK)\b", text)
+        if tm_full:
+            meta.ticker = tm_full.group(1)
+            print(f"[INFO] ticker 从报告正文提取: {meta.ticker}")
+
+    if not meta.ticker:
+        print(f"[WARN] 未能从报告提取 ticker,slug/market 可能不准确")
 
     meta.market = _detect_market(meta.ticker, company_name)
     meta.slug = _slug_from_company(company_name, meta.ticker)
@@ -292,7 +320,7 @@ def extract_metadata(md_path: Path, company_name: str) -> CardMetadata:
 
 # ---------- reports.json upsert ----------
 
-def upsert_reports_json(repo_data_json: Path, card: CardMetadata, force: bool = False) -> bool:
+def upsert_reports_json(repo_data_json: Path, card: CardMetadata) -> bool:
     """合并 card 到 reports.json. 返回是否新增(True)或更新(False)."""
     if repo_data_json.exists():
         data = json.loads(repo_data_json.read_text(encoding="utf-8"))
@@ -309,12 +337,8 @@ def upsert_reports_json(repo_data_json: Path, card: CardMetadata, force: bool = 
             break
 
     if existing_idx is not None:
-        if force or r.get("report_date", "") <= card.report_date:
-            reports[existing_idx] = card_dict
-            is_new = False
-        else:
-            print(f"[WARN] 已存在更新版本 {r.get('report_date')} >= {card.report_date},跳过(用 --force 强制覆盖)")
-            return False
+        reports[existing_idx] = card_dict
+        is_new = False
     else:
         reports.append(card_dict)
         is_new = True
@@ -338,7 +362,7 @@ def main():
     ap.add_argument("--company", required=True, help="公司目录名, 例 实丰文化")
     ap.add_argument("--output-dir", help="output 根目录 (默认 output/)")
     ap.add_argument("--repo", help="Inves-Report 仓库路径 (例 /tmp/Inves-Report-v2). 若指定则自动 upsert reports.json")
-    ap.add_argument("--force", action="store_true", help="强制覆盖 reports.json 中的现有条目")
+    ap.add_argument("--force", action="store_true", help="(已废弃,无效果) 现在总是覆盖")
     args = ap.parse_args()
 
     output_root = Path(args.output_dir) if args.output_dir else None
@@ -398,7 +422,7 @@ def main():
         target_card.write_text(card_json.read_text(encoding="utf-8"), encoding="utf-8")
         print(f"✅ 复制到 {target_card}")
 
-        is_new = upsert_reports_json(data_json, card, force=args.force)
+        is_new = upsert_reports_json(data_json, card)
         action = "新增" if is_new else "更新"
         print(f"✅ {action} reports.json 条目 (ticker={card.ticker})")
 
