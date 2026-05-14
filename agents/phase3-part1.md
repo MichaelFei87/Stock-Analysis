@@ -35,6 +35,8 @@ model: inherit
 
 ## 核心约束(★ 最严格)
 
+- ★ **章节标题逐字复制 skeleton**(见 `references/agent-protocol.md` §5.1,违反触发 Phase 6 修正循环)
+
 - ★ §一 综合评分 = §二 加权分加总 (允差 ≤ 0.05);grep 验证 part3.md 提取 10 维度评分,自己算加权
 - ★ §一 verdict 方向必须与 §十一 3 框架综合判断一致(看多/看空/中性)
 - ★ §一 Top 3 风险必须每条都对应至少 1 个 audit 红旗或 §三 快筛触发条款

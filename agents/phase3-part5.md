@@ -29,6 +29,8 @@ model: inherit
 
 ## 核心约束
 
+- ★ **章节标题逐字复制 skeleton**(见 `references/agent-protocol.md` §5.1,违反触发 Phase 6 修正循环)
+
 - ★ §十二 信息缺口 — 必须 ≥ 3 条已尝试查询(从 phase1-data.md §11 抄过来,加"是否已被替代来源覆盖"列)
 - ★ §十三 数据可审计性 — 按 3 类分组(Tushare 结构化 / PDF / WebSearch)+ audit 红旗汇总段(按严重度排序的所有红旗)
 - 不接触 part1/2/3/4 的写作

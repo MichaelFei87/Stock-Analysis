@@ -30,6 +30,8 @@ model: inherit
 
 ## 核心约束(★ 反偷懒)
 
+- ★ **章节标题逐字复制 skeleton**(见 `references/agent-protocol.md` §5.1,违反触发 Phase 6 修正循环)
+
 - ★ 财务趋势表必须 **inline** data_snapshot.md §3 全部行(包括最新季报),禁止"详见 data_snapshot.md"
 - ★ 十大股东表 inline data_snapshot.md §5 ≥ 9 行(推荐 2 期对比)
 - ★ 十大流通股东表 inline data_snapshot.md §6 ≥ 9 行

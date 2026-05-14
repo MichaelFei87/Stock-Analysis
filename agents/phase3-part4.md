@@ -33,6 +33,8 @@ model: inherit
 
 ## 核心约束
 
+- ★ **章节标题逐字复制 skeleton**(见 `references/agent-protocol.md` §5.1,违反触发 Phase 6 修正循环)
+
 - ★ §九 DCF 4 情景概率分布合理(常见 25/45/25/5,极端 10/80/8/2 警告)
 - ★ §九 永续 g < 折现 r (强制,g ≥ r 数学错误)
 - ★ §九 DCF 假设 vs §四 财务趋势历史 不应内在矛盾(读 part2.md 验证)
