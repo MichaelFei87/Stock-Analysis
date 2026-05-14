@@ -1,22 +1,22 @@
-"""Inves-Report 主页联动 (v4.6).
+"""Stock-Analysis-Reports 主页联动 (v4.6).
 
 解决 Phase 6 Part C 痛点: 每份新报告都要手工编辑 index.html 加卡片。
 v4.6 改为自动:
 1. 从主报告 MD 抽取卡片元数据(ticker / 评分 / 结论 / 收益 / 日期 等)
 2. 写到 output/{company}/card-metadata.json
-3. 若指定 --repo, 自动合并到 Inves-Report/data/reports.json (upsert by ticker)
+3. 若指定 --repo, 自动合并到 Stock-Analysis-Reports/data/reports.json (upsert by ticker)
 
 Usage:
-    # 只生成 card-metadata.json (不改 Inves-Report)
+    # 只生成 card-metadata.json (不改 Stock-Analysis-Reports)
     python3 -m scripts.update_index --company 实丰文化
 
-    # 生成并 upsert 到 Inves-Report
+    # 生成并 upsert 到 Stock-Analysis-Reports
     python3 -m scripts.update_index --company 实丰文化 \\
-        --repo /tmp/Inves-Report-v2
+        --repo /tmp/Stock-Analysis-Reports-v2
 
     # 强制覆盖现有报告 (by ticker match)
     python3 -m scripts.update_index --company 实丰文化 \\
-        --repo /tmp/Inves-Report-v2
+        --repo /tmp/Stock-Analysis-Reports-v2
 """
 from __future__ import annotations
 
@@ -128,7 +128,7 @@ class CardMetadata:
 
 
 def _slug_from_company(company_name: str, ticker: str) -> str:
-    """根据 Inves-Report 现有命名惯例: EnglishName_中文名."""
+    """根据 Stock-Analysis-Reports 现有命名惯例: EnglishName_中文名."""
     # 已有映射表(历史兼容)
     known = {
         "闻泰科技": "Wingtech_闻泰科技",
@@ -398,10 +398,10 @@ def upsert_reports_json(repo_data_json: Path, card: CardMetadata) -> bool:
 # ---------- 主入口 ----------
 
 def main():
-    ap = argparse.ArgumentParser(description="Inves-Report 主页卡片元数据自动化 (v4.6)")
+    ap = argparse.ArgumentParser(description="Stock-Analysis-Reports 主页卡片元数据自动化 (v4.6)")
     ap.add_argument("--company", required=True, help="公司目录名, 例 实丰文化")
     ap.add_argument("--output-dir", help="output 根目录 (默认 output/)")
-    ap.add_argument("--repo", help="Inves-Report 仓库路径 (例 /tmp/Inves-Report-v2). 若指定则自动 upsert reports.json")
+    ap.add_argument("--repo", help="Stock-Analysis-Reports 仓库路径 (例 /tmp/Stock-Analysis-Reports-v2). 若指定则自动 upsert reports.json")
     ap.add_argument("--html", help="HTML 报告路径 (自动复制为 reports/{slug}/分析报告_dashboard.html)")
     ap.add_argument("--force", action="store_true", help="(已废弃,无效果) 现在总是覆盖")
     args = ap.parse_args()

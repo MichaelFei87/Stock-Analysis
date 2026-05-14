@@ -150,21 +150,21 @@ python3 -m scripts.build_html --md output/{company}/{company}-analysis-{date}.md
 
 ```bash
 # 1. FRESH clone (删除旧的,确保从最新远端开始)
-rm -rf /tmp/Inves-Report
-git clone https://github.com/MichaelFei87/Inves-Report.git /tmp/Inves-Report
+rm -rf /tmp/Stock-Analysis-Reports
+git clone https://github.com/MichaelFei87/Stock-Analysis-Reports.git /tmp/Stock-Analysis-Reports
 
 # 2. 生成 card-metadata + 复制 HTML 到 reports/{slug}/分析报告_dashboard.html + upsert reports.json
 python3 -m scripts.update_index --company {company} \
     --html output/{company}/{date}.html \
-    --repo /tmp/Inves-Report
+    --repo /tmp/Stock-Analysis-Reports
 
 # 3. git add & push (slug 从 update_index 的 stdout 提取)
-git -C /tmp/Inves-Report add "reports/{slug}/分析报告_dashboard.html" "reports/{slug}/card-metadata.json" data/reports.json
-git -C /tmp/Inves-Report commit -m "feat: add {company} analysis report"
-git -C /tmp/Inves-Report push
+git -C /tmp/Stock-Analysis-Reports add "reports/{slug}/分析报告_dashboard.html" "reports/{slug}/card-metadata.json" data/reports.json
+git -C /tmp/Stock-Analysis-Reports commit -m "feat: add {company} analysis report"
+git -C /tmp/Stock-Analysis-Reports push
 
 # 4. 清理
-rm -rf /tmp/Inves-Report
+rm -rf /tmp/Stock-Analysis-Reports
 ```
 
 **关键**: 每次 publish 都 fresh clone → 避免本地脏状态。`{slug}` 由 `update_index.py` 输出。render.js 默认链接 `reports/{slug}/分析报告_dashboard.html`。

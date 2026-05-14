@@ -5,7 +5,7 @@
 > **🧭 你在这里**：[SKILL.md 协调器](../SKILL.md) → Phase 3 → **Phase 6 审核与发布**（终点）
 >
 > **接收自**: 所有上游产出（`phase1-data.md` / `phase2-documents.md` / 主报告 `{company}-analysis-*.md`）
-> **输出**: `*.html` + `phase6-review-log.md` + GitHub Pages（MichaelFei87/Inves-Report）
+> **输出**: `*.html` + `phase6-review-log.md` + GitHub Pages（MichaelFei87/Stock-Analysis-Reports）
 > **v4.3 说明**: 审核 **22 项**（v4.2 新增 #19/#20 估值一致性+SOTP；v4.3 新增 #21 HTML 资产加载 + #22 Exec Summary 7 字段）+ Part D 5 步穷举补查保留
 > **v4.3 HTML 规则**: 必须从 `assets/html/base.html` + `assets/html/styles.css` + `assets/html/components.html` 加载,**禁止凭记忆重写 CSS 或自创变量名**
 > **质量门控**: 全部 22 项通过；每个缺口有 ✅/⚠️/❌ 状态；HTML section 数 = 13；CSS 变量数 ≥ 16
@@ -214,30 +214,30 @@ Step 5: 自检 (v4.6 更新):
 
 > **v4.6 重大变更**: 不再手工编辑 `index.html` 加卡片。Phase 6 Part C Step 4 调用 `scripts/update_index.py` 自动抽取 card-metadata + upsert `data/reports.json`,主页通过 JS `fetch` 动态渲染。index.html 只有骨架,**永不需手工改**。
 
-**目标仓库**: `MichaelFei87/Inves-Report`
+**目标仓库**: `MichaelFei87/Stock-Analysis-Reports`
 
 **执行步骤**(v4.6 自动化):
 
 ```
 1. 确保仓库已克隆:
-   cd /tmp/Inves-Report-v2 && git pull origin main
+   cd /tmp/Stock-Analysis-Reports-v2 && git pull origin main
    (如不存在则 git clone)
 
 2. 创建/更新公司报告目录:
-   mkdir -p /tmp/Inves-Report-v2/reports/{CompanySlug}_{CompanyNameCN}
+   mkdir -p /tmp/Stock-Analysis-Reports-v2/reports/{CompanySlug}_{CompanyNameCN}
 
 3. 复制 HTML 报告:
-   cp output/{company}/{company}-analysis-{date}.html /tmp/Inves-Report-v2/reports/{CompanySlug}_{CompanyNameCN}/分析报告_dashboard.html
+   cp output/{company}/{company}-analysis-{date}.html /tmp/Stock-Analysis-Reports-v2/reports/{CompanySlug}_{CompanyNameCN}/分析报告_dashboard.html
 
 4. ★ 自动更新主页卡片数据(v4.6 替换旧的"手工编辑 index.html"):
    python3 -m scripts.update_index --company {company} \
-       --repo /tmp/Inves-Report-v2
+       --repo /tmp/Stock-Analysis-Reports-v2
 
    这会:
    - 解析主报告 MD 的 <!-- CARD_METADATA / RATING_TRIO_DATA / KEY_METRICS_SIDEBAR --> 结构化注释块
    - 生成 output/{company}/card-metadata.json
-   - 复制到 /tmp/Inves-Report-v2/reports/{slug}/card-metadata.json
-   - upsert 到 /tmp/Inves-Report-v2/data/reports.json
+   - 复制到 /tmp/Stock-Analysis-Reports-v2/reports/{slug}/card-metadata.json
+   - upsert 到 /tmp/Stock-Analysis-Reports-v2/data/reports.json
    - 主页 JS 会从 reports.json 自动渲染新卡片 + 更新统计数字
 
    若解析结果不理想(老报告未带结构化注释块), 会走 regex fallback 并输出警告。
@@ -245,7 +245,7 @@ Step 5: 自检 (v4.6 更新):
    三个注释块**(见 assets/templates/report-skeleton.md)。
 
 5. 提交推送(v4.6 新 — 改动由 4 项减为 3 项: HTML + card-metadata + reports.json):
-   cd /tmp/Inves-Report-v2
+   cd /tmp/Stock-Analysis-Reports-v2
    git add reports/{CompanySlug}_{CompanyNameCN}/ data/reports.json
    git commit -m "feat: 新增/更新 {company} 投资分析报告"
    git push origin main
