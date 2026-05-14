@@ -15,12 +15,12 @@
 
 ---
 
-## Phase 1: 数据采集 (Agent 工具 → data-collector)
+## Phase 1: 数据采集 (Agent 工具 → general-purpose)
 
 **调度 checklist**:
 
 1. 用 Agent 工具启动 data-collector:
-   - subagent_type = `data-collector`
+   - subagent_type = `general-purpose`（自定义类型名不被 Agent 工具支持，统一用 general-purpose）
    - prompt 含 ticker / company / market / output_dir
 2. 等 sub-agent 完成(前台,等响应)
 3. 用 Bash 跑 `grep "^\*\*判定\*\*:" <response>` 提取判定
@@ -97,10 +97,13 @@ python3 -m scripts.anti_lazy_lint output/{company}/{company}-analysis-{date}.md
 1. 主 agent **并行**启动 3 个 reviewer(都 `run_in_background=True`):
 
    ```python
-   Agent(subagent_type="reviewer-narrative",  run_in_background=True,
-         prompt=f"评审 ...{company}-analysis-{date}.md, artifacts_dir=...")
-   Agent(subagent_type="reviewer-valuation",  run_in_background=True, prompt=...)
-   Agent(subagent_type="reviewer-redflag",    run_in_background=True, prompt=...)
+   Agent(subagent_type="general-purpose",  run_in_background=True,
+         prompt=f"评审 ...{company}-analysis-{date}.md, artifacts_dir=...",
+         description="reviewer-narrative round 1")
+   Agent(subagent_type="general-purpose",  run_in_background=True,
+         prompt=..., description="reviewer-valuation round 1")
+   Agent(subagent_type="general-purpose",  run_in_background=True,
+         prompt=..., description="reviewer-redflag round 1")
    ```
 2. 等 3 个完成(系统通过 task-notification 自动通知)
 3. 主 agent 把 3 份响应**保存为文件**:

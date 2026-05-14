@@ -37,13 +37,15 @@ argument-hint: <company-name> [--monitor]
 **正确调用**:
 
 ```python
-Agent(subagent_type="X", prompt="...",
+Agent(subagent_type="general-purpose", prompt="...",
       run_in_background=True/False, description="...")
 ```
 
+**⚠️ subagent_type 必须是 `"general-purpose"`**。Agent 工具不支持自定义类型名（如 `data-collector`、`reviewer-narrative` 等），使用自定义名称会报错。通过 `description` 和 `prompt` 区分不同角色。
+
 **修正循环规则**(Fresh-Restart with Context Injection):
 
-修正时**重新启动同 subagent_type 的 sub-agent**,在 prompt 里注入上轮 FIX 列表:
+修正时**重新启动新的 general-purpose sub-agent**,在 prompt 里注入上轮 FIX 列表:
 
 ```
 prompt = f"""[正常评审任务...]

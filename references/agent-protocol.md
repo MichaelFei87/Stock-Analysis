@@ -12,7 +12,7 @@
 |---|---|---|
 | `description` | string | 短描述(3-5 词),给 UI 显示 |
 | `prompt` | string | 给 sub-agent 的任务 prompt(必填) |
-| `subagent_type` | string | sub-agent 类型(如 `data-collector`)(必填) |
+| `subagent_type` | string | 必须使用内置类型 `"general-purpose"`。自定义名称(如 `data-collector`)不被支持 |
 | `run_in_background` | bool | 后台跑(true)/ 前台等(false) |
 | `isolation` | string (可选) | `"worktree"` 创建临时 git worktree |
 | `model` | string (可选) | 覆盖 sub-agent 模型 |
@@ -45,7 +45,7 @@
 prev_fix_md = bash("cat output/{company}/reviewer_responses/round_1_merged_fix.md")
 
 Agent(
-    subagent_type="reviewer-narrative",
+    subagent_type="general-purpose",
     run_in_background=True,
     description="reviewer-narrative round 2",
     prompt=f"""评审 output/{company}/{company}-analysis-{date}.md 维度 1 叙事一致性。
