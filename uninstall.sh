@@ -3,7 +3,7 @@
 # Claude Code 公司投资分析 Skill — 卸载
 #
 # 使用方法：
-#   curl -fsSL https://raw.githubusercontent.com/MichaelFei87/claude-company-analysis/main/uninstall.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main/uninstall.sh | bash
 #
 
 SKILL_DIR="$HOME/.claude/skills/company-analysis"

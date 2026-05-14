@@ -3,7 +3,7 @@
 # Claude Code 投资分析 Skill — 一键安装 (v5.1.4)
 #
 # 使用方法：
-#   curl -fsSL https://raw.githubusercontent.com/MichaelFei87/claude-company-analysis/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main/install.sh | bash
 #
 # 幂等：重复运行可查漏补缺，已有文件会被覆盖为最新版本。
 #
@@ -11,7 +11,7 @@
 set -e
 
 SKILL_DIR="$HOME/.claude/skills/company-analysis"
-REPO_URL="https://raw.githubusercontent.com/MichaelFei87/claude-company-analysis/main"
+REPO_URL="https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main"
 VERSION="5.1.4"
 
 echo "================================================"

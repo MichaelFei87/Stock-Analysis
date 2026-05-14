@@ -54,7 +54,7 @@ Phase 7 量化监控       （/company-analysis <公司> --monitor）
 ### 1. 安装 skill
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MichaelFei87/claude-company-analysis/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main/install.sh | bash
 ```
 
 这会克隆到 `~/.claude/skills/company-analysis/` 并创建 `~/投资报告/` 输出目录。
@@ -115,7 +115,7 @@ python3 -m scripts.check_env
 ## 📂 仓库结构
 
 ```
-claude-company-analysis/
+Stock-Analysis/
 ├── README.md                   # 本文件
 ├── CHANGELOG.md                # v1 → v5.1.4 演进
 ├── LICENSE                     # MIT
@@ -239,7 +239,7 @@ Phase 7 以历史报告的带标签指标为基线，重跑数据层对比变化
 
 ## 🗂️ 与 Inves-Report 仓库的关系
 
-本仓库（`claude-company-analysis`）是 **skill 代码**。
+本仓库（`Stock-Analysis`）是 **skill 代码**。
 
 生成的 **分析报告 HTML** 发布在姊妹仓库 [MichaelFei87/Inves-Report](https://github.com/MichaelFei87/Inves-Report)，通过 GitHub Pages 在线浏览：
 
