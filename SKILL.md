@@ -150,6 +150,17 @@ Phase 1 (data-collector) → Phase 2 (主 agent) → Phase 3 (5 sub-agent 串行
 - 每次 sub-agent 完成,主 agent 用 Bash `grep "^\*\*判定\*\*:" response` 提取判定
 - 修正循环只用 fresh-restart(详见 phase-orchestration.md §Phase 6)
 - 状态持久化:reviewer 响应 / FIX 列表 / diff signature 全部写文件,不靠 context 记忆
+- ★ **禁止在 sub-agent prompt 中硬编码任何年份数字**（如"2025年年度报告"）。所有涉及财报年份的参数必须由主 agent 在调度前**动态计算**:
+  1. 当前日期 `{date}` 已知（如 20260514）
+  2. **最新年报 FY** = 若当前月份 ≥ 5 则 `当前年-1`，否则 `当前年-2`（因为年报通常 4 月底前披露）
+     - 例: 20260514 → 月份 5 ≥ 5 → FY = **2025** → 搜"2025年年度报告"
+     - 例: 20260314 → 月份 3 < 5 → FY = **2024** → 搜"2024年年度报告"
+  3. **最新季报** = 基于当前月份推断已披露的最新季度:
+     - 1-4月 → 上年三季报（{当前年-1}年第三季度报告）
+     - 5-8月 → 当年一季报（{当前年}年第一季度报告）
+     - 9-10月 → 当年半年报（{当前年}年半年度报告）
+     - 11-12月 → 当年三季报（{当前年}年第三季度报告）
+  4. 计算完毕后,将 `{latest_annual_fy}` 和 `{latest_quarterly_desc}` 作为参数写入 data-collector prompt
 
 ---
 

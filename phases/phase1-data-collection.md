@@ -44,6 +44,8 @@
 - `{market}` — `A股` / `美股` / `港股` / `N/A`
 - `{ticker}` — 股票代码（上市公司，如 `002862` / `AAPL` / `0700.HK`）
 - `{output_dir}` — `output/{company}/`
+- `{latest_annual_fy}` — 最新已披露年报的财年（如 `2025`），由主 agent 根据当前日期动态计算
+- `{latest_quarterly_desc}` — 最新已披露季报描述（如 `2026年第一季度报告`），由主 agent 动态计算
 
 **创业公司跳到 §7 "创业公司模式"**。本文主流程针对上市公司。
 
@@ -270,18 +272,20 @@ python3 -m scripts.data_snapshot \
 yf_latest_fy = financials.columns[0]  # e.g. 2025-12-31
 ```
 
-搜索 PDF 时，**必须搜与 yf_latest_fy 同期或更新的年报**。例如 yfinance 已有 FY2025 数据，则搜 "2025 年度报告"，而非 "2024 年度报告"。
+搜索 PDF 时，使用主 agent 传入的 `{latest_annual_fy}` 搜对应年报。
 
-**若只能找到比 yfinance 更旧的 PDF**（如 yfinance 有 FY2025 但只找到 FY2024 PDF）：
-- 🟡 在 `phase1-data.md §1` 中标注：`PDF 年报 FY2024（过期），yfinance 已有 FY2025 结构化数据作为财务主源`
+**若只能找到比 `{latest_annual_fy}` 更旧的 PDF**（如主 agent 传入 FY2025 但只找到 FY2024 PDF）：
+- 🟡 在 `phase1-data.md §1` 中标注：`PDF 年报 FY2024（过期），结构化数据已有 FY2025 作为财务主源`
 - 仍下载旧 PDF 用于提取定性内容（管理层讨论、分部数据、变动原因等），但 **财务数字以 yfinance 为准**
 - Phase 2 文档精析时会据此调整精读策略
 
 ### 2.1 定位最新年报+季报的 PDF URL
 
+**年份由主 agent 传入**: 主 agent prompt 中提供 `{latest_annual_fy}` 和 `{latest_quarterly_desc}`，直接使用，禁止自行推断。
+
 **A 股**（从 cninfo.com.cn 巨潮资讯）:
-1. WebSearch: `site:cninfo.com.cn {company} {ticker} 2025 年度报告 PDF`
-2. WebSearch: `site:cninfo.com.cn {company} {ticker} 2025 第三季度报告 PDF`（替换为最近季度）
+1. WebSearch: `site:cninfo.com.cn {company} {ticker} {latest_annual_fy} 年度报告 PDF`
+2. WebSearch: `site:cninfo.com.cn {company} {ticker} {latest_quarterly_desc} PDF`
 3. 也可以在 Tushare `disclosure_date` 接口看预约披露日期帮助定位
 
 **美股**（从 SEC EDGAR）:

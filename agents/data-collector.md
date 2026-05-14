@@ -69,9 +69,11 @@ python3 -m scripts.data_snapshot --bundle output/{company}/raw_data --out output
 
 ### Step 3: PDF 下载
 
+**年份由主 agent 传入，禁止自行计算**。主 agent 在 prompt 中提供 `{latest_annual_fy}`（如 2025）和 `{latest_quarterly_desc}`（如"2026年第一季度报告"），直接使用即可。
+
 按 `references/search-strategy.md` 顺序:
 
-- A 股: WebSearch `site:cninfo.com.cn {ticker} {company} 2025年年度报告 PDF`
+- A 股: WebSearch `site:cninfo.com.cn {ticker} {company} {latest_annual_fy}年年度报告 PDF`，再搜 `{latest_quarterly_desc} PDF`
 - 美股: WebSearch SEC EDGAR
 - 港股: WebSearch hkex.com.hk 披露易
 
