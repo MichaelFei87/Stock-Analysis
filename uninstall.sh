@@ -6,7 +6,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main/uninstall.sh | bash
 #
 
-SKILL_DIR="$HOME/.claude/skills/company-analysis"
+SKILL_DIR="$HOME/.claude/skills/stock-analyze"
 
 echo "正在卸载 Claude Code 公司投资分析 Skill..."
 

@@ -370,4 +370,4 @@
 
 ---
 
-*本报告由 Claude Code company-analysis skill v{{skill_version}}（6+1 阶段流水线 + 11 大师框架审计）生成。禁止用于实际投资决策，仅作研究参考。*
+*本报告由 Claude Code stock-analyze skill v{{skill_version}}（6+1 阶段流水线 + 11 大师框架审计）生成。禁止用于实际投资决策，仅作研究参考。*

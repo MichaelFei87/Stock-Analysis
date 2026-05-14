@@ -374,7 +374,7 @@ def _format_summary(result: MonitorResult) -> str:
         lines.append(f"- **预约披露日**: {result.next_disclosure_date}（{days or '?'} 天后）")
     else:
         lines.append("- **预约披露日**: 未知（`disclosure_date` API 未返回有效日期）")
-    lines.append("- 建议手动触发: `/company-analysis-monitor " + result.company + "`")
+    lines.append("- 建议手动触发: `/stock-analyze-monitor " + result.company + "`")
 
     lines += [
         "",
@@ -413,7 +413,7 @@ class Monitor:
         if baseline_report is None:
             raise FileNotFoundError(
                 f"No analysis report found in {company_dir}. "
-                f"Run /company-analysis {self.company} first."
+                f"Run /stock-analyze {self.company} first."
             )
         baseline_date = _extract_report_date(baseline_report)
         today = dt.date.today().strftime("%Y-%m-%d")

@@ -1,4 +1,4 @@
-"""company-analysis data layer — structured financial data collection & computation.
+"""stock-analyze data layer — structured financial data collection & computation.
 
 Modules:
     config            配置（token 路径、缓存 TTL、速率限制）

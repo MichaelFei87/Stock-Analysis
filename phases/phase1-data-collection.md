@@ -49,8 +49,8 @@
 
 ```bash
 # 自适应定位 skill 根(避免硬编码用户名,plugin 安装在任何 ~/.claude/plugins/ 都能跑)
-cd ./skills/company-analysis 2>/dev/null || \
-  cd "$HOME/.claude/plugins/company-analysis/skills/company-analysis" 2>/dev/null || \
+cd ./skills/stock-analyze 2>/dev/null || \
+  cd "$HOME/.claude/plugins/stock-analyze/skills/stock-analyze" 2>/dev/null || \
   { echo "❌ 无法定位 skill 根"; exit 1; }
 python3 -m scripts.check_env
 ```

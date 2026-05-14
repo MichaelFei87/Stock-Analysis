@@ -4,7 +4,7 @@
 验证下游 fallback 分支命中并产生 Pro 风格 schema 的 DataFrame。
 
 运行:
-    cd skills/company-analysis
+    cd skills/stock-analyze
     python3 -m scripts.tests.test_daily_fallback
 """
 from __future__ import annotations

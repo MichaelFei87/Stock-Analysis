@@ -15,7 +15,7 @@ def check() -> int:
     """Return 0 if env is OK, non-zero otherwise."""
     from . import config
 
-    print("=== company-analysis skill env check ===\n")
+    print("=== stock-analyze skill env check ===\n")
     ok = True
 
     # Python

@@ -11,7 +11,7 @@ TUSHARE_TOKEN: str | None = os.environ.get("TUSHARE_TOKEN")
 # 调用 A 股/港股 collector 时才显式检查（见 tushare_collector.require_token()）
 
 # ---------- 缓存 ----------
-_DEFAULT_CACHE = Path.home() / ".claude" / "plugins" / "company-analysis" / ".cache"
+_DEFAULT_CACHE = Path.home() / ".claude" / "plugins" / "stock-analyze" / ".cache"
 CACHE_DIR: Path = Path(os.environ.get("COMPANY_ANALYSIS_CACHE", _DEFAULT_CACHE)).expanduser()
 CACHE_TTL_DAYS: int = int(os.environ.get("COMPANY_ANALYSIS_CACHE_TTL", "7"))
 
@@ -25,8 +25,8 @@ TUSHARE_RETRY_BACKOFF: float = 1.5  # 指数退避倍数
 YFINANCE_RATE_LIMIT_SEC: float = 0.3
 
 # ---------- 输出目录 ----------
-SKILL_ROOT: Path = Path(__file__).resolve().parent.parent  # skills/company-analysis/
-PLUGIN_ROOT: Path = SKILL_ROOT.parent.parent               # plugins/company-analysis/
+SKILL_ROOT: Path = Path(__file__).resolve().parent.parent  # skills/stock-analyze/
+PLUGIN_ROOT: Path = SKILL_ROOT.parent.parent               # plugins/stock-analyze/
 
 # v4: 历史 output 在 plugin 根目录下（因为 SKILL.md 曾说"不保存到 skill 目录"），
 # 所以 OUTPUT_ROOT 优先用 plugin 根的 output，若不存在则用 skill 根的 output（新安装场景）

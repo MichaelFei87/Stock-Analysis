@@ -348,8 +348,8 @@ def main():
         candidates.append(output_root / args.company)
     candidates.extend([
         Path(f"output/{args.company}"),
-        Path.home() / ".claude" / "plugins" / "company-analysis" / "output" / args.company,
-        Path.home() / ".claude" / "skills" / "company-analysis" / "output" / args.company,
+        Path.home() / ".claude" / "plugins" / "stock-analyze" / "output" / args.company,
+        Path.home() / ".claude" / "skills" / "stock-analyze" / "output" / args.company,
     ])
     company_dir = None
     md_path = None

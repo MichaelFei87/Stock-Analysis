@@ -1,6 +1,6 @@
 # scripts/ — Python 数据层
 
-为 company-analysis skill 提供**结构化金融数据**（取代纯 WebSearch）：
+为 stock-analyze skill 提供**结构化金融数据**（取代纯 WebSearch）：
 - **Tushare Pro** 拿 A 股三大报表 + 股权 + 估值
 - **yfinance** 拿美股（及港股 fallback）
 - **pypdf** 解析财报 PDF 原文（关键段落如"利润表项目变动原因"）
@@ -35,7 +35,7 @@ source ~/.zshrc
 ### 3. 验证环境
 
 ```bash
-cd skills/company-analysis/
+cd skills/stock-analyze/
 python3 -m scripts.check_env
 ```
 
@@ -139,9 +139,9 @@ metrics = compute_a_share(bundle)
 
 ## 缓存管理
 
-- 位置：`~/.claude/plugins/company-analysis/.cache/`（可通过 `COMPANY_ANALYSIS_CACHE` 环境变量覆盖）
+- 位置：`~/.claude/plugins/stock-analyze/.cache/`（可通过 `COMPANY_ANALYSIS_CACHE` 环境变量覆盖）
 - TTL：7 天（`COMPANY_ANALYSIS_CACHE_TTL` 可覆盖）
-- 清理：`rm -rf ~/.claude/plugins/company-analysis/.cache/*.parquet*`
+- 清理：`rm -rf ~/.claude/plugins/stock-analyze/.cache/*.parquet*`
 
 ---
 

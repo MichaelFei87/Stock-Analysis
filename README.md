@@ -42,7 +42,7 @@ Phase 3 综合分析与报告 （13 章节主报告 + Step 1.5 自动跑 11 框�
 Phase 6 审核发布       （18 项审核 + Part D 补查闭环 + HTML + GitHub Pages）
 
     [可选，手动触发] ↓
-Phase 7 量化监控       （/company-analysis <公司> --monitor）
+Phase 7 量化监控       （/stock-analyze <公司> --monitor）
 ```
 
 完整流程 / 质量门控 / 异常处理见 [SKILL.md](./SKILL.md)。
@@ -57,12 +57,12 @@ Phase 7 量化监控       （/company-analysis <公司> --monitor）
 curl -fsSL https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main/install.sh | bash
 ```
 
-这会克隆到 `~/.claude/skills/company-analysis/` 并创建 `~/投资报告/` 输出目录。
+这会克隆到 `~/.claude/skills/stock-analyze/` 并创建 `~/投资报告/` 输出目录。
 
 ### 2. 安装 Python 依赖
 
 ```bash
-cd ~/.claude/skills/company-analysis/scripts
+cd ~/.claude/skills/stock-analyze/scripts
 pip3 install --user -r requirements.txt
 ```
 
@@ -84,7 +84,7 @@ source ~/.zshrc
 ### 4. 环境自检
 
 ```bash
-cd ~/.claude/skills/company-analysis
+cd ~/.claude/skills/stock-analyze
 python3 -m scripts.check_env
 ```
 
@@ -95,19 +95,19 @@ python3 -m scripts.check_env
 在 Claude Code 对话里：
 
 ```
-/company-analysis 实丰文化
+/stock-analyze 实丰文化
 ```
 
 或提供股票代码（加速）：
 
 ```
-/company-analysis 贵州茅台 600519.SH
+/stock-analyze 贵州茅台 600519.SH
 ```
 
 量化监控（基于历史基线报告）：
 
 ```
-/company-analysis 实丰文化 --monitor
+/stock-analyze 实丰文化 --monitor
 ```
 
 ---

@@ -324,7 +324,7 @@ def main():
     else:
         candidates = [
             Path(f"output/{args.company}"),
-            Path.home() / ".claude" / "plugins" / "company-analysis" / "output" / args.company,
+            Path.home() / ".claude" / "plugins" / "stock-analyze" / "output" / args.company,
         ]
         company_dir = next((c for c in candidates if c.exists()), None)
         if not company_dir:

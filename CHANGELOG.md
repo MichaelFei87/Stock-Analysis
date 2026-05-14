@@ -43,7 +43,7 @@
 - **`SKILL.md`** 427 → 234 行(45% 压缩),遵守 Anthropic 渐进披露原则:保留路由必需 + Sub-agent 调用清单 + 调度协议总览;详细 checklist defer 到 `references/phase-orchestration.md`
 - **`references/agent-protocol.md`** 重写 §1-§9:Agent 真实 schema / Fresh-Restart 协议 / 双层日志 / 修正循环不变量 / 自检结构 / lessons / 失败处理 / 工具不可用 fallback
 - **frontmatter `description`** 简化为纯路由信号(去版本号 + 实现细节,从"v5.1.1 主智能体调度规范风格..."改为"分析单个上市公司...生成投资分析报告...")
-- **4 处硬编码 `/Users/MichaelFei87/` 路径** 改为自适应定位(`./skills/company-analysis` → `$HOME/.claude/plugins/...` fallback,不硬编码用户名):`agents/data-collector.md` / `phases/phase1-data-collection.md` / `phases/phase7-quantitative-monitor.md`
+- **4 处硬编码 `/Users/MichaelFei87/` 路径** 改为自适应定位(`./skills/stock-analyze` → `$HOME/.claude/plugins/...` fallback,不硬编码用户名):`agents/data-collector.md` / `phases/phase1-data-collection.md` / `phases/phase7-quantitative-monitor.md`
 
 ### Deferred to v5.2
 
@@ -543,7 +543,7 @@ v4.4 `capital_flow.py _derive_metrics` 只拉 `top10_floatholders`(前十大**�
   - `financial_audit.py`：**11 大师框架异常审计**
   - `report_parser.py`：解析历史报告带标签指标
   - `monitor.py`：量化监控核心
-- **Phase 7 量化监控**：`/company-analysis <公司> --monitor` 手动触发
+- **Phase 7 量化监控**：`/stock-analyze <公司> --monitor` 手动触发
 - **Phase 3 Step 1.5 自动 audit**：生成 `audit_report.md` + JSON
 - **11 大师框架**：
   - Piotroski F-Score（0-9 分财务健康）

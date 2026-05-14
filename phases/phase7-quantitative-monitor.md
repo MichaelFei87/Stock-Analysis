@@ -2,7 +2,7 @@
 
 > **🧭 你在这里**：[SKILL.md 协调器](../SKILL.md) → **Phase 7 量化监控**（可选，手动触发）
 >
-> **触发条件**: 用户命令 `/company-analysis <公司> --monitor`，或明确说"监控/更新/复查"
+> **触发条件**: 用户命令 `/stock-analyze <公司> --monitor`，或明确说"监控/更新/复查"
 > **接收自**: 历史主报告 `output/{company}/{company}-analysis-*.md`（如存在旧版 `phase5-variant-perception.md` 也可选读取）
 > **输出**: `output/{company}/monitor_{company}_{date}.md`（简报）
 > **质量门控**: §1 重大变化表 ≥5 行 OR "无变化"明示；§4 综合结论为 "维持/建议复评/重大修订" 3 档之一
@@ -18,7 +18,7 @@
 - 检查洞察证伪条件是否触发（仅旧版报告含 Phase 5 洞察时适用）
 - 给出"维持/复评/重大修订"的明确结论
 
-**你不做**: 重跑完整分析、生成新的洞察、深度分析。你只做**对比**和**告警**。若结论是"重大修订"，建议用户重跑 `/company-analysis <公司>` 进入 Phase 1-6。
+**你不做**: 重跑完整分析、生成新的洞察、深度分析。你只做**对比**和**告警**。若结论是"重大修订"，建议用户重跑 `/stock-analyze <公司>` 进入 Phase 1-6。
 
 ---
 
@@ -36,8 +36,8 @@
 ### Step 0: 环境自检
 
 ```bash
-cd ./skills/company-analysis 2>/dev/null || \
-  cd "$HOME/.claude/plugins/company-analysis/skills/company-analysis" 2>/dev/null || \
+cd ./skills/stock-analyze 2>/dev/null || \
+  cd "$HOME/.claude/plugins/stock-analyze/skills/stock-analyze" 2>/dev/null || \
   { echo "❌ 无法定位 skill 根"; exit 1; }
 python3 -m scripts.check_env
 ```
@@ -90,7 +90,7 @@ python3 -m scripts.monitor {company} \
    - 你可以基于定性理解微调（但要说明理由）
    - 若维持 → 确认简报
    - 若建议复评 → 明确建议用户复核哪 N 个章节
-   - 若重大修订 → 明确告诉用户"重跑 `/company-analysis {公司}` 生成新版本"
+   - 若重大修订 → 明确告诉用户"重跑 `/stock-analyze {公司}` 生成新版本"
 
 ### Step 4: 追加"投资行动建议"章节
 
@@ -105,7 +105,7 @@ python3 -m scripts.monitor {company} \
 **建议操作**:
 - {若维持} "继续持有 / 保持观望。下次监控建议 {disclosure_date or 30 天后}。"
 - {若建议复评} "手动复核以下章节: ..."
-- {若重大修订} "立即重跑完整分析: `/company-analysis {company}`"
+- {若重大修订} "立即重跑完整分析: `/stock-analyze {company}`"
 
 **跟踪清单**（至少 3 项）:
 - [ ] {具体指标 1} - 下次查看日期
@@ -143,7 +143,7 @@ python3 -m scripts.monitor {company} \
 
 ## §3 下次监控触发
 - 预约披露日: {YYYY-MM-DD}（{X} 天后）
-- 建议手动触发: `/company-analysis {company} --monitor`
+- 建议手动触发: `/stock-analyze {company} --monitor`
 
 ## §3.5 新发现的信息缺口（LLM 补充）
 {若新数据暴露了 Phase 1 没覆盖的缺口}
@@ -165,7 +165,7 @@ python3 -m scripts.monitor {company} \
 
 | 情况 | 处理方式 |
 |------|---------|
-| 未找到基线报告 | 告诉用户："请先跑 `/company-analysis {company}` 生成基线" |
+| 未找到基线报告 | 告诉用户："请先跑 `/stock-analyze {company}` 生成基线" |
 | Tushare 调用失败 | 脚本会抛 `RuntimeError`，你告诉用户具体原因（积分/网络/token） |
 | 基线报告没有 `[Tushare:*]` 标签（旧 v1/v2 报告） | 简报仅包含 §2 和 §3 两节，§1 标注"基线报告未采用 v3+ 来源标签，无法做指标级对比" |
 | Phase 5 文件不存在 | 简报 §2 标注"无洞察文件，证伪检查跳过"（v5.1.4 起新报告均无此文件，属正常） |
@@ -182,7 +182,7 @@ python3 -m scripts.monitor {company} \
 - Phase 7 是**低成本定期追踪**（对比基线 + 证伪检查，花 2-3 分钟）
 
 **典型使用场景**：
-1. 首次分析某公司 → `/company-analysis 实丰文化`（走 Phase 1-6）
-2. 1 周后想看看有什么变化 → `/company-analysis 实丰文化 --monitor`（走 Phase 7）
-3. 季报披露后 → `/company-analysis 实丰文化 --monitor`（Phase 7）
-4. 监控结论"重大修订" → `/company-analysis 实丰文化`（回到 Phase 1-6 重新完整分析）
+1. 首次分析某公司 → `/stock-analyze 实丰文化`（走 Phase 1-6）
+2. 1 周后想看看有什么变化 → `/stock-analyze 实丰文化 --monitor`（走 Phase 7）
+3. 季报披露后 → `/stock-analyze 实丰文化 --monitor`（Phase 7）
+4. 监控结论"重大修订" → `/stock-analyze 实丰文化`（回到 Phase 1-6 重新完整分析）

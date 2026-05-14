@@ -1,7 +1,7 @@
 """单元测试: scripts.legacy_quote 模块.
 
 运行:
-    cd skills/company-analysis
+    cd skills/stock-analyze
     python3 -m pytest scripts/tests/test_legacy_quote.py -v
 
 或不依赖 pytest:

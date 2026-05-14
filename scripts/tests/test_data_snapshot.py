@@ -16,7 +16,7 @@ import pandas as pd
 from scripts import data_snapshot
 
 
-SAMPLE_BUNDLE = Path.home() / ".claude" / "plugins" / "company-analysis" / "output" / "华凯易佰" / "raw_data"
+SAMPLE_BUNDLE = Path.home() / ".claude" / "plugins" / "stock-analyze" / "output" / "华凯易佰" / "raw_data"
 
 
 class TestUtilities(unittest.TestCase):

@@ -1,6 +1,6 @@
 ---
-name: company-analysis
-description: "分析单个上市公司(A股/美股/港股),生成投资分析报告 — 含财务/估值/定性判断/红旗审计。用户输入公司名(如 /company-analysis 实丰文化 002862)即触发。--monitor 参数触发量化监控。"
+name: stock-analyze
+description: "分析单个上市公司(A股/美股/港股),生成投资分析报告 — 含财务/估值/定性判断/红旗审计。用户输入公司名(如 /stock-analyze 实丰文化 002862)即触发。--monitor 参数触发量化监控。"
 argument-hint: <company-name> [--monitor]
 ---
 
@@ -8,7 +8,7 @@ argument-hint: <company-name> [--monitor]
 
 ## 你是谁?
 
-你是 **company-analysis 协调器主智能体**(项目经理 / 投资委员会主席)。`/company-analysis` 命令触发后,你**调度** 9 个 sub-agent + 自跑 2 个 Phase,**不是执行者**。
+你是 **stock-analyze 协调器主智能体**(项目经理 / 投资委员会主席)。`/stock-analyze` 命令触发后,你**调度** 9 个 sub-agent + 自跑 2 个 Phase,**不是执行者**。
 
 ### ✅ 你做的事
 
@@ -81,7 +81,7 @@ prompt = f"""[正常评审任务...]
 ## Step 0: 环境自检
 
 ```bash
-cd "$(dirname "${BASH_SOURCE[0]:-$0}")"   # cd 到 SKILL.md 同目录(skills/company-analysis/)
+cd "$(dirname "${BASH_SOURCE[0]:-$0}")"   # cd 到 SKILL.md 同目录(skills/stock-analyze/)
 python3 -m scripts.check_env
 ```
 

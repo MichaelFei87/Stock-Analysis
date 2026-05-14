@@ -10,7 +10,7 @@
 
 set -e
 
-SKILL_DIR="$HOME/.claude/skills/company-analysis"
+SKILL_DIR="$HOME/.claude/skills/stock-analyze"
 REPO_URL="https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main"
 VERSION="5.1.4"
 
@@ -184,8 +184,8 @@ if [ -z "$ERRORS" ]; then
     echo ""
     echo "  4. 重启 Claude Code，然后使用："
     echo ""
-    echo "     /company-analysis <公司名称>"
-    echo "     /company-analysis <公司名称> --monitor   # 量化监控"
+    echo "     /stock-analyze <公司名称>"
+    echo "     /stock-analyze <公司名称> --monitor   # 量化监控"
     echo ""
 else
     echo ""
