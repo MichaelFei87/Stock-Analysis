@@ -67,9 +67,11 @@ python3 -m scripts.data_snapshot --bundle output/{company}/raw_data --out output
 
 某 collector 失败 → 标 ❌ 但继续其他。
 
-### Step 3: PDF 下载
+### Step 3: PDF 下载 + 段落提取 (regex 快速路径 + LLM fallback)
 
 **年份由主 agent 传入，禁止自行计算**。主 agent 在 prompt 中提供 `{latest_annual_fy}`（如 2025）和 `{latest_quarterly_desc}`（如"2026年第一季度报告"），直接使用即可。
+
+#### Step 3a: 下载 + regex 提取
 
 按 `references/search-strategy.md` 顺序:
 
@@ -77,9 +79,55 @@ python3 -m scripts.data_snapshot --bundle output/{company}/raw_data --out output
 - 美股: WebSearch SEC EDGAR
 - 港股: WebSearch hkex.com.hk 披露易
 
-下载至少 2 份(年报 + 最新季报),用 `python3 -m scripts.pdf_reader {URL} --all-sections --out output/{company}/raw_data/pdf_sections_{name}.json`。
+下载至少 2 份(年报 + 最新季报),跑 regex 快速提取:
+
+```bash
+python3 -m scripts.pdf_reader {URL} --all-sections --out output/{company}/raw_data/pdf_sections_{name}_regex.json
+```
 
 PDF 失败 → 备用 URL → 仍失败标"已尝试: {urls}",继续。
+
+#### Step 3b: 检查命中率 → LLM fallback
+
+检查 regex 输出的命中率(脚本末尾会打印 `Regex 命中率: N/9`)。
+
+**如果命中率 < 7/9**(即 ≥3 个 section 失败),启动 LLM fallback:
+
+1. 导出 PDF 全文:
+   ```bash
+   python3 -m scripts.pdf_reader {PDF路径或URL} --dump-text output/{company}/raw_data/{name}_fulltext.md
+   ```
+
+2. 用 Read 工具分批读取 `{name}_fulltext.md`(每次 ~2000 行),对 **每个 regex 失败的 section**:
+   - 参照 `SECTION_PATTERNS` 中该 section 的 `desc` 描述
+   - 在全文中定位对应内容(找到起始页和结束页)
+   - 提取原文文本
+
+3. 把 LLM 提取结果写为 JSON:
+   ```bash
+   # Write 到 pdf_sections_{name}_llm.json, 格式与 regex 输出一致:
+   # { "section_id": { "desc": "...", "found": true/false, "start_page": N, "end_page": N, "text": "..." } }
+   ```
+
+**LLM 提取规则**:
+- 只提取 regex 失败的 section,不要重复提取已成功的
+- `text` 字段为**原文摘录**(不要改写/总结),保留 `[P.N]` 页码标注
+- 每个 section text 上限 8000 字符(与 regex fallback 一致)
+- 如果全文中确实没有该段落内容(如季报确实没有 MD&A),标 `"found": false`
+
+#### Step 3c: 合并结果
+
+```bash
+python3 -m scripts.pdf_reader dummy --merge \
+    output/{company}/raw_data/pdf_sections_{name}_regex.json \
+    output/{company}/raw_data/pdf_sections_{name}_llm.json \
+    --out output/{company}/raw_data/pdf_sections_{name}.json
+```
+
+脚本会打印最终命中率:`命中率: N/9 (regex: X, llm: Y, missing: Z)`
+
+**如果命中率 ≥ 7/9**: 正常继续
+**如果命中率 < 7/9**: 标"⚠️ PDF 提取降级",但不中止
 
 ### Step 4: WebSearch 3 轮
 

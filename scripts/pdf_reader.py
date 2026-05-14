@@ -230,6 +230,54 @@ class PDFReader:
             return 1
         return int(pages[-1])
 
+    def dump_text(self, pdf_path: str | Path, out_path: str | Path) -> dict:
+        """Export full PDF text as markdown with page headings. Returns stats dict."""
+        pages = self.extract_text(pdf_path)
+        total_chars = sum(len(t) for t in pages)
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        filename = Path(pdf_path).name
+        lines = [f"# {filename} Full Text ({len(pages)} pages, {total_chars} chars)\n"]
+        for i, text in enumerate(pages):
+            lines.append(f"\n## Page {i + 1}\n")
+            lines.append(text)
+        out_path.write_text("\n".join(lines), encoding="utf-8")
+
+        stats = {"pages": len(pages), "total_chars": total_chars,
+                 "per_page": [len(t) for t in pages]}
+        return stats
+
+    @staticmethod
+    def merge_sections(regex_path: str | Path, llm_path: str | Path, out_path: str | Path) -> dict:
+        """Merge regex-extracted and LLM-extracted sections. Regex wins when found=True."""
+        regex_path, llm_path, out_path = Path(regex_path), Path(llm_path), Path(out_path)
+        regex_data = json.loads(regex_path.read_text()) if regex_path.exists() else {}
+        llm_data = json.loads(llm_path.read_text()) if llm_path.exists() else {}
+
+        merged = {}
+        all_keys = set(list(regex_data.keys()) + list(llm_data.keys()))
+        regex_count = llm_count = missing_count = 0
+        for key in all_keys:
+            r = regex_data.get(key, {})
+            l = llm_data.get(key, {})
+            if r.get("found"):
+                merged[key] = {**r, "method": "regex"}
+                regex_count += 1
+            elif l.get("found"):
+                merged[key] = {**l, "method": "llm"}
+                llm_count += 1
+            else:
+                merged[key] = r if r else l if l else {"found": False, "text": ""}
+                merged[key]["method"] = "none"
+                missing_count += 1
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(merged, ensure_ascii=False, indent=2))
+        total = len(all_keys)
+        print(f"命中率: {regex_count + llm_count}/{total} (regex: {regex_count}, llm: {llm_count}, missing: {missing_count})")
+        return {"total": total, "regex": regex_count, "llm": llm_count, "missing": missing_count}
+
     def search(self, pdf_path: str | Path, pattern: str, flags: int = re.IGNORECASE) -> list[dict]:
         """Full-text regex search. Returns list of {page, line, snippet}."""
         pages = self.extract_text(pdf_path)
@@ -254,11 +302,26 @@ def main():
     ap.add_argument("--section", default=None,
                     help=f"Extract a single section. Choices: {','.join(SECTION_PATTERNS)}")
     ap.add_argument("--search", default=None, help="Regex to search in full text")
-    ap.add_argument("--all-sections", action="store_true", help="Extract all known sections")
+    ap.add_argument("--all-sections", "--regex-sections", action="store_true",
+                    dest="all_sections", help="Extract all known sections via regex")
     ap.add_argument("--out", default=None, help="If given, dump extracted sections to this JSON path")
+    ap.add_argument("--dump-text", default=None, dest="dump_text",
+                    help="Export full PDF text as markdown to this path (for LLM processing)")
+    ap.add_argument("--stats", action="store_true",
+                    help="Print page count, total chars, and per-page char summary")
+    ap.add_argument("--merge", nargs=2, metavar=("REGEX_JSON", "LLM_JSON"),
+                    help="Merge regex and LLM section JSONs. Use with --out for output path")
     args = ap.parse_args()
 
     r = PDFReader()
+
+    # -- merge mode (no PDF needed) --
+    if args.merge:
+        if not args.out:
+            print("--merge requires --out <path>", file=sys.stderr)
+            sys.exit(2)
+        r.merge_sections(args.merge[0], args.merge[1], args.out)
+        return
 
     # download if URL
     p = args.pdf_path
@@ -266,6 +329,21 @@ def main():
         tmp = Path("/tmp") / Path(p).name
         p = r.download(p, tmp)
         print(f"Downloaded to {p}", file=sys.stderr)
+
+    # -- dump-text mode --
+    if args.dump_text:
+        stats = r.dump_text(p, args.dump_text)
+        print(f"Exported {stats['pages']} pages, {stats['total_chars']} chars → {args.dump_text}")
+        return
+
+    # -- stats mode --
+    if args.stats:
+        pages = r.extract_text(p)
+        total = sum(len(t) for t in pages)
+        print(f"{len(pages)} pages, {total} chars total")
+        for i, t in enumerate(pages):
+            print(f"  Page {i+1:3d}: {len(t):6d} chars")
+        return
 
     if args.search:
         hits = r.search(p, args.search)
@@ -291,11 +369,13 @@ def main():
         if args.out:
             Path(args.out).write_text(json.dumps(sections, ensure_ascii=False, indent=2))
             print(f"Saved sections to {args.out}")
-        else:
-            for sec_id, info in sections.items():
-                marker = "✅" if info["found"] else "❌"
-                pg = f"P.{info['start_page']}-{info['end_page']}" if info["found"] else "(not found)"
-                print(f"{marker} {sec_id:28s} {pg}  — {info['desc']}")
+        found = sum(1 for s in sections.values() if s["found"])
+        total = len(sections)
+        for sec_id, info in sections.items():
+            marker = "✅" if info["found"] else "❌"
+            pg = f"P.{info['start_page']}-{info['end_page']}" if info["found"] else "(not found)"
+            print(f"{marker} {sec_id:28s} {pg}  — {info['desc']}")
+        print(f"\nRegex 命中率: {found}/{total}")
         return
 
     # default: page count + length summary
