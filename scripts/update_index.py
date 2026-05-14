@@ -362,6 +362,7 @@ def main():
     ap.add_argument("--company", required=True, help="公司目录名, 例 实丰文化")
     ap.add_argument("--output-dir", help="output 根目录 (默认 output/)")
     ap.add_argument("--repo", help="Inves-Report 仓库路径 (例 /tmp/Inves-Report-v2). 若指定则自动 upsert reports.json")
+    ap.add_argument("--html", help="HTML 报告路径 (自动复制为 reports/{slug}/分析报告_dashboard.html)")
     ap.add_argument("--force", action="store_true", help="(已废弃,无效果) 现在总是覆盖")
     args = ap.parse_args()
 
@@ -409,18 +410,40 @@ def main():
     print(f"✅ 写入 {card_json}")
     print(f"   ticker={card.ticker} · score={card.composite_score} · verdict={card.verdict} · tone={card.verdict_tone}")
 
-    # 若指定 --repo,合并到 reports.json
+    # 若指定 --repo,合并到 reports.json + 复制文件到 reports/{slug}/
     if args.repo:
         repo = Path(args.repo)
         if not repo.exists():
             print(f"⚠️  {repo} 不存在,跳过 upsert")
             return 0
         data_json = repo / "data" / "reports.json"
-        # 同时复制 card-metadata.json 到 repo/reports/{slug}/
-        target_card = repo / "reports" / card.slug / "card-metadata.json"
-        target_card.parent.mkdir(parents=True, exist_ok=True)
+        report_dir = repo / "reports" / card.slug
+        report_dir.mkdir(parents=True, exist_ok=True)
+
+        # 复制 card-metadata.json
+        target_card = report_dir / "card-metadata.json"
         target_card.write_text(card_json.read_text(encoding="utf-8"), encoding="utf-8")
         print(f"✅ 复制到 {target_card}")
+
+        # 复制 HTML 报告到 reports/{slug}/分析报告_dashboard.html
+        # (render.js 默认用此文件名)
+        html_src = args.html
+        if not html_src:
+            # 自动查找 output/{company}/ 下的 HTML
+            html_candidates = sorted(company_dir.glob("*.html"), reverse=True)
+            if html_candidates:
+                html_src = str(html_candidates[0])
+        if html_src:
+            src = Path(html_src)
+            if src.exists():
+                target_html = report_dir / "分析报告_dashboard.html"
+                import shutil
+                shutil.copy2(src, target_html)
+                print(f"✅ 复制 HTML → {target_html}")
+            else:
+                print(f"⚠️  HTML 源文件不存在: {src}")
+        else:
+            print(f"⚠️  未找到 HTML 报告,跳过 HTML 复制")
 
         is_new = upsert_reports_json(data_json, card)
         action = "新增" if is_new else "更新"
