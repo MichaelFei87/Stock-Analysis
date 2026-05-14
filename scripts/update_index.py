@@ -169,12 +169,48 @@ def _parse_structured_block(text: str, block_name: str) -> dict[str, str]:
     return result
 
 
+def _load_phase1_meta(company_dir: Path) -> dict:
+    """Load structured meta.json written by Phase 1 data collector (if exists)."""
+    for candidate in [company_dir / "raw_data" / "meta.json", company_dir / "meta.json"]:
+        if candidate.exists():
+            try:
+                return json.loads(candidate.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+    return {}
+
+
+def _normalize_verdict(verdict_cn: str) -> str:
+    """Normalize Chinese verdict text to English enum."""
+    v = (verdict_cn or "").strip()
+    if not v or v == "–":
+        return v
+    bullish_kw = ["强烈看好", "推荐买入", "买入", "看多", "有条件看好", "看好"]
+    bearish_kw = ["看空", "回避", "减仓", "卖出", "偏空"]
+    neutral_kw = ["中性", "持有", "观望"]
+    for kw in bullish_kw:
+        if kw in v:
+            return "Bullish"
+    for kw in bearish_kw:
+        if kw in v:
+            return "Bearish"
+    for kw in neutral_kw:
+        if kw in v:
+            return "Neutral"
+    # Already English or unrecognized — return as-is
+    return v
+
+
+
 def extract_metadata(md_path: Path, company_name: str) -> CardMetadata:
     text = md_path.read_text(encoding="utf-8")
 
     meta = CardMetadata()
-    meta.name = company_name  # default, 英文名稍后尝试抽
     meta.name_cn = company_name
+
+    # Phase 1 structured metadata — authoritative source for ticker/market/industry
+    p1 = _load_phase1_meta(md_path.parent)
+    meta.name = p1.get("name_en") or company_name
 
     # v4.6: 优先解析 HTML 注释中的结构化 metadata 块(Phase 3 写报告时填入)
     card_block = _parse_structured_block(text, "CARD_METADATA")
@@ -186,16 +222,20 @@ def extract_metadata(md_path: Path, company_name: str) -> CardMetadata:
     if date_m:
         meta.report_date = date_m.group(1)
 
-    # Title 抽 ticker: # xxx(002862.SZ)投资分析报告
+    # Ticker: Phase 1 meta.json is authoritative
     title = _grep(text, r"^#\s+(.+)$")
-    ticker_m = re.search(r"\(([^)]*\.(SH|SZ|BJ|HK|US)[^)]*)\)", title)
-    if ticker_m:
-        meta.ticker = ticker_m.group(1).strip()
+    if p1.get("ticker"):
+        meta.ticker = p1["ticker"]
+        print(f"[INFO] ticker 从 meta.json 提取: {meta.ticker}")
     else:
-        # fallback: 找任何 "XXXXXX.SZ" 或纯 ticker
-        tm = re.search(r"\b(\d{6}\.(SH|SZ|BJ)|[A-Z]{1,5}\.US|\d{1,5}\.HK|\d{6})\b", title)
-        if tm:
-            meta.ticker = tm.group(1)
+        # fallback: Title 抽 ticker: # xxx(002862.SZ)投资分析报告
+        ticker_m = re.search(r"\(([^)]*\.(SH|SZ|BJ|HK|US)[^)]*)\)", title)
+        if ticker_m:
+            meta.ticker = ticker_m.group(1).strip()
+        else:
+            tm = re.search(r"\b(\d{6}\.(SH|SZ|BJ)|[A-Z]{1,5}\.US|\d{1,5}\.HK|\d{6})\b", title)
+            if tm:
+                meta.ticker = tm.group(1)
 
     # fallback 2: CARD_METADATA 块中的 ticker 字段
     if not meta.ticker and card_block.get("ticker"):
@@ -212,7 +252,7 @@ def extract_metadata(md_path: Path, company_name: str) -> CardMetadata:
     if not meta.ticker:
         print(f"[WARN] 未能从报告提取 ticker,slug/market 可能不准确")
 
-    meta.market = _detect_market(meta.ticker, company_name)
+    meta.market = p1.get("market") or _detect_market(meta.ticker, company_name)
     meta.slug = _slug_from_company(company_name, meta.ticker)
 
     # 版本号(从 title 后的 v4.1 等)或从正文找最末的 "v4.1 修订"
@@ -233,7 +273,7 @@ def extract_metadata(md_path: Path, company_name: str) -> CardMetadata:
     if not verdict:
         # 从"一句话结论"的粗体前缀找
         verdict = _grep(text, r"\*\*一句话结论\*\*:\s*\*\*([^*]+)\*\*")
-    meta.verdict = verdict or "–"
+    meta.verdict = _normalize_verdict(verdict) if verdict else "–"
     meta.verdict_tone = _infer_tone(verdict, score)
 
     # 估值锚 / 期望收益
@@ -264,8 +304,8 @@ def extract_metadata(md_path: Path, company_name: str) -> CardMetadata:
     one_liner = re.sub(r"\s+", " ", one_liner).strip()
     meta.one_liner = one_liner[:300]  # 截断
 
-    # 业务领域(sector) — 优先 CARD_METADATA 块, 其次从正文推断
-    sector = card_block.get("sector")
+    # 业务领域(sector) — 优先 Phase 1 meta.json, 其次 CARD_METADATA 块, 最后正文推断
+    sector = p1.get("industry") or card_block.get("sector")
     if not sector:
         # 从 title 或 副标题括号里找业务关键词
         # 优先: 主报告 §四 业务板块表或 §一"一句话结论"开头"XX 是..." / title 注释括号

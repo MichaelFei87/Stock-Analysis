@@ -90,7 +90,7 @@ class HKCollector:
         return bundle
 
 
-def save_bundle(bundle: dict[str, pd.DataFrame], out_dir: Path) -> None:
+def save_bundle(bundle: dict[str, pd.DataFrame], out_dir: Path, ticker: str = "", name: str = "") -> None:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     summary = {}
@@ -101,6 +101,27 @@ def save_bundle(bundle: dict[str, pd.DataFrame], out_dir: Path) -> None:
     (out_dir / "_manifest.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
     )
+    # Structured company metadata for downstream (update_index.py)
+    meta: dict = {"ticker": ticker, "name_cn": name, "name_en": "",
+                  "industry": "", "area": "Hong Kong", "market": "hk", "exchange": "HKEX", "list_date": ""}
+    hk_basic = bundle.get("hk_basic")
+    if hk_basic is not None and not hk_basic.empty:
+        row = hk_basic.iloc[0]
+        meta["ticker"] = str(row.get("ts_code", ticker))
+        meta["name_cn"] = str(row.get("name", ""))
+        meta["industry"] = str(row.get("industry", ""))
+    # yfinance fallback for name_en, industry, name_cn
+    yf_info = bundle.get("yf_info", pd.DataFrame())
+    if not yf_info.empty:
+        row = yf_info.iloc[0]
+        if not meta["name_en"] and "shortName" in yf_info.columns:
+            meta["name_en"] = str(row.get("shortName", ""))
+        if not meta["industry"] and "industry" in yf_info.columns:
+            meta["industry"] = str(row.get("industry", ""))
+        if not meta["name_cn"] and "longName" in yf_info.columns:
+            meta["name_cn"] = str(row.get("longName", ""))
+    (out_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+    print(f"  📋 meta.json: ticker={meta['ticker']} market=hk industry={meta['industry']}")
 
 
 def main():
@@ -125,7 +146,7 @@ def main():
             name = hk_code.replace(".", "_")
         out_dir = config.output_dir(name) / "raw_data"
 
-    save_bundle(bundle, out_dir)
+    save_bundle(bundle, out_dir, ticker=hk_code, name=args.name or "")
 
     print(f"\nSaved to: {out_dir}")
     for key, df in bundle.items():

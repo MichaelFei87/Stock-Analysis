@@ -801,7 +801,43 @@ class TushareCollector:
 
 # ---------- Output helpers ----------
 
-def save_bundle(bundle: dict[str, pd.DataFrame], out_dir: Path) -> None:
+def _detect_market_from_ticker(ticker: str) -> str:
+    """Infer market from ticker suffix."""
+    t = (ticker or "").upper()
+    if re.search(r"\.(SH|SZ|BJ)$", t):
+        return "a"
+    if re.search(r"\.HK$", t):
+        return "hk"
+    if re.search(r"\.US$", t):
+        return "us"
+    if re.match(r"^\d{6}$", t):
+        return "a"
+    if re.match(r"^\d{4,5}$", t):
+        return "hk"
+    if t and re.match(r"^[A-Z]{1,5}$", t):
+        return "us"
+    return "unknown"
+
+
+def _extract_meta(bundle: dict[str, pd.DataFrame], market: str) -> dict:
+    """Extract structured company metadata from bundle for meta.json."""
+    meta: dict = {"ticker": "", "name_cn": "", "name_en": "", "industry": "",
+                  "area": "", "market": market, "exchange": "", "list_date": ""}
+    sb = bundle.get("stock_basic")
+    if sb is not None and not sb.empty:
+        row = sb.iloc[0]
+        meta["ticker"] = str(row.get("ts_code", ""))
+        meta["name_cn"] = str(row.get("name", ""))
+        meta["industry"] = str(row.get("industry", ""))
+        meta["area"] = str(row.get("area", ""))
+        meta["exchange"] = str(row.get("exchange", ""))
+        meta["list_date"] = str(row.get("list_date", ""))
+        if not meta["market"] or meta["market"] == "unknown":
+            meta["market"] = _detect_market_from_ticker(meta["ticker"])
+    return meta
+
+
+def save_bundle(bundle: dict[str, pd.DataFrame], out_dir: Path, name: str = "") -> None:
     """Save each DataFrame as a Parquet file under out_dir/raw_data/."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -815,6 +851,14 @@ def save_bundle(bundle: dict[str, pd.DataFrame], out_dir: Path) -> None:
     (out_dir / "_manifest.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
     )
+    # Save structured company metadata for downstream (update_index.py)
+    meta = _extract_meta(bundle, "a")
+    if name:
+        meta["name_cn"] = name  # CLI --name overrides stock_basic
+    (out_dir / "meta.json").write_text(
+        json.dumps(meta, ensure_ascii=False, indent=2),
+    )
+    print(f"  📋 meta.json: ticker={meta['ticker']} market={meta['market']} industry={meta['industry']}")
 
 
 # ---------- CLI ----------
@@ -845,7 +889,7 @@ def main():
             name = ts_code.replace(".", "_")
         out_dir = config.output_dir(name) / "raw_data"
 
-    save_bundle(bundle, out_dir)
+    save_bundle(bundle, out_dir, name=args.name or "")
 
     print(f"\nSaved to: {out_dir}")
     for key, df in bundle.items():

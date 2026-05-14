@@ -185,7 +185,7 @@ class USCollector:
         return bundle
 
 
-def save_bundle(bundle: dict[str, pd.DataFrame], out_dir: Path) -> None:
+def save_bundle(bundle: dict[str, pd.DataFrame], out_dir: Path, ticker: str = "", name: str = "") -> None:
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     summary = {}
@@ -196,6 +196,17 @@ def save_bundle(bundle: dict[str, pd.DataFrame], out_dir: Path) -> None:
     (out_dir / "_manifest.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
     )
+    # Structured company metadata for downstream (update_index.py)
+    info = bundle.get("info", pd.DataFrame())
+    meta: dict = {"ticker": ticker, "name_cn": name, "name_en": "",
+                  "industry": "", "area": "", "market": "us", "exchange": "", "list_date": ""}
+    if not info.empty:
+        get = lambda k: str(info.iloc[0].get(k, "")) if k in info.columns else ""
+        meta["name_en"] = get("shortName") or get("longName")
+        meta["industry"] = get("industry")
+        meta["exchange"] = get("exchange")
+    (out_dir / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2))
+    print(f"  📋 meta.json: ticker={meta['ticker']} market=us industry={meta['industry']}")
 
 
 def main():
@@ -216,7 +227,7 @@ def main():
         name = args.name or code
         out_dir = config.output_dir(name) / "raw_data"
 
-    save_bundle(bundle, out_dir)
+    save_bundle(bundle, out_dir, ticker=code, name=args.name or "")
 
     print(f"\nSaved to: {out_dir}")
     for key, df in bundle.items():
