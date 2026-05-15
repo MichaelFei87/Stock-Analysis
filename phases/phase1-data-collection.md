@@ -24,7 +24,8 @@
   - **港股/美股**: `yfinance > PDF 原文 > Web Search`（Tushare 港股无财务报表接口，美股无覆盖）
 - ✅ **yfinance 时效性检查（★ 新增）**: 跑完 yfinance 后，**立即比较 `financials` 最新列的 fiscal year 与当前日期**。若 yfinance 已有比 PDF 更新的年度数据（例如 yfinance 有 FY2025 而只找到 FY2024 PDF），则 **以 yfinance 年度数据为财务数据主源**，PDF 仅用于补充定性内容（分部数据、管理层讨论、变动原因原文等 yfinance 没有的信息）
 - ✅ **PDF 原文补充**: 上市公司仍须尝试下载最新年报+季报，提取"变动原因"原文、分部明细等结构化 API 不含的定性信息
-- ✅ **Web 搜索只补舆情**: WebSearch 只用于补充网络情绪、行业洞察、新闻事件，**不得用作关键财务数据来源**
+- ✅ **搜索优先级**: Tavily 优先（`python3 -m scripts.tavily_search "{query}" --domains {domain}`），结果为空或报错时 fallback 到 WebSearch
+- ✅ **Web 搜索只补舆情**: 搜索只用于补充网络情绪、行业洞察、新闻事件，**不得用作关键财务数据来源**
 - ✅ **来源标注强制**: 每条数据必须附来源标签，`[Tushare:income]` / `[yfinance:financials]` / `[PDF:annual_2024,P.X]` / `[WebSearch:xueqiu.com]`，没标签的数据不得写入
 
 **你不能做的事情:**
@@ -285,15 +286,17 @@ yf_latest_fy = financials.columns[0]  # e.g. 2025-12-31
 **年份由主 agent 传入**: 主 agent prompt 中提供 `{latest_annual_fy}` 和 `{latest_quarterly_desc}`，直接使用，禁止自行推断。
 
 **A 股**（从 cninfo.com.cn 巨潮资讯）:
-1. WebSearch: `site:cninfo.com.cn {company} {ticker} {latest_annual_fy} 年度报告 PDF`
-2. WebSearch: `site:cninfo.com.cn {company} {ticker} {latest_quarterly_desc} PDF`
+1. Tavily 优先: `python3 -m scripts.tavily_search "site:cninfo.com.cn {company} {ticker} {latest_annual_fy}年年度报告 PDF" --domains cninfo.com.cn`，无结果则 WebSearch 同 query
+2. Tavily 优先: `python3 -m scripts.tavily_search "site:cninfo.com.cn {company} {ticker} {latest_quarterly_desc} PDF" --domains cninfo.com.cn`，无结果则 WebSearch 同 query
 3. 也可以在 Tushare `disclosure_date` 接口看预约披露日期帮助定位
 
 **美股**（从 SEC EDGAR）:
+- Tavily 优先: `python3 -m scripts.tavily_search "{company} {ticker} 10-K annual report SEC EDGAR {latest_annual_fy}" --domains sec.gov`，无结果则 WebSearch 或直接访问:
 - `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10-K&dateb=&owner=include&count=40`
 - 取最新 10-K 和 10-Q 的 PDF 或 HTM 链接
 
 **港股**（从 hkex.com.hk 披露易）:
+- Tavily 优先: `python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hkex.com.hk,hkexnews.hk`，无结果则 WebSearch 或直接访问:
 - `https://www1.hkexnews.hk/listedco/listconews/advancedsearch/search_active_main.aspx?lang=ZH`
 - 搜该股代码，取最新 Annual Report 和 Interim Report
 
@@ -371,6 +374,8 @@ python3 -m scripts.derived_metrics output/{company}/raw_data/ --market {a|us|hk}
 ## Step 4: Web 搜索补充软信息（**仅限舆情/行业/新闻**）
 
 **本阶段禁止搜索财务数据**——财务数据应已在 Step 1-3 拿齐。
+
+**★ 搜索工具优先级**: 每轮搜索均 **Tavily 优先**（`python3 -m scripts.tavily_search "{query}" --domains {domain}`），Tavily 返回空或报错时 fallback 到 WebSearch 同 query。
 
 加载 `references/search-strategy.md` 执行：
 
