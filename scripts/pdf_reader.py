@@ -118,6 +118,94 @@ SECTION_PATTERNS: dict[str, dict] = {
     },
 }
 
+# ---- HK English annual report section heading patterns ----
+# Same keys as SECTION_PATTERNS so merge_sections() works transparently.
+SECTION_PATTERNS_EN: dict[str, dict] = {
+    "main_financial_data": {
+        "start": r"(?:Five.Year|Five\s+Year|5.Year)\s+Financial\s+Summary|Financial\s+Summary|Financial\s+Highlights",
+        "end": [
+            r"Management\s+Discussion",
+            r"Chairman.s\s+Statement",
+            r"Directors.\s+Report",
+        ],
+        "desc": "Financial Summary / Highlights",
+    },
+    "non_recurring_items": {
+        "start": r"Non.IFRS\s+Measures|Non.GAAP\s+Measures|Reconciliation\s+of\s+Non.IFRS",
+        "end": [
+            r"Segment\s+Analysis",
+            r"Liquidity",
+            r"Other\s+Financial\s+Information",
+        ],
+        "desc": "Non-IFRS / Non-GAAP reconciliation",
+    },
+    "balance_sheet_changes": {
+        "start": r"Consolidated\s+Statement\s+of\s+Financial\s+Position|Consolidated\s+Balance\s+Sheet",
+        "end": [
+            r"Consolidated\s+Statement\s+of\s+Changes",
+            r"Consolidated\s+Statement\s+of\s+Cash\s+Flow",
+            r"Notes\s+to\s+the\s+Consolidated",
+        ],
+        "desc": "Consolidated Balance Sheet",
+    },
+    "income_statement_changes": {
+        "start": r"Consolidated\s+(?:Income\s+Statement|Statement\s+of\s+Profit|Statement\s+of\s+Comprehensive\s+Income)",
+        "end": [
+            r"Consolidated\s+Statement\s+of\s+Financial\s+Position",
+            r"Consolidated\s+Balance\s+Sheet",
+            r"Consolidated\s+Statement\s+of\s+Changes",
+        ],
+        "desc": "Consolidated Income Statement",
+    },
+    "cashflow_changes": {
+        "start": r"Consolidated\s+Statement\s+of\s+Cash\s+Flow|Consolidated\s+Cash\s+Flow\s+Statement",
+        "end": [
+            r"Notes\s+to\s+the\s+Consolidated",
+            r"Consolidated\s+Statement\s+of\s+Changes",
+        ],
+        "desc": "Consolidated Cash Flow Statement",
+    },
+    "mda": {
+        "start": r"Management\s+Discussion\s+and\s+Analysis|Business\s+Review\s+and\s+Outlook|Operating\s+and\s+Financial\s+Review",
+        "end": [
+            r"Directors.\s+Report",
+            r"Corporate\s+Governance",
+            r"Report\s+of\s+the\s+Directors",
+        ],
+        "desc": "Management Discussion & Analysis (MD&A)",
+    },
+    "subsidiaries": {
+        "start": r"(?:Principal|Major)\s+Subsidiaries|Particulars\s+of\s+(?:Principal\s+)?Subsidiaries|List\s+of\s+(?:Principal\s+)?Subsidiaries",
+        "end": [
+            r"Financial\s+Statements",
+            r"Independent\s+Auditor",
+            r"Definitions?\s+and\s+Glossary",
+        ],
+        "desc": "Principal Subsidiaries",
+    },
+    "risks": {
+        "start": r"Risk\s+(?:Factors?|Management)|Principal\s+Risks|Key\s+Risks",
+        "end": [
+            r"Corporate\s+Governance",
+            r"Directors.\s+Report",
+            r"Environmental,?\s+Social",
+        ],
+        "desc": "Risk Factors",
+    },
+    "top10_holders": {
+        "start": r"Substantial\s+Shareholders|Interests\s+(?:and\s+Short\s+Positions\s+)?(?:in|of)\s+(?:the\s+)?Shares|Disclosure\s+of\s+Interests",
+        "end": [
+            r"Directors.\s+(?:Interests|Emoluments|Remuneration)",
+            r"Connected\s+Transactions",
+            r"Share\s+Option\s+Scheme",
+        ],
+        "desc": "Substantial Shareholders / Disclosure of Interests",
+    },
+}
+
+# Minimum regex hit count to accept a pattern set (below → try other language)
+_MIN_HITS_THRESHOLD = 3
+
 
 class PDFReader:
     """Read A-share / HK / US report PDFs with section-level extraction."""
@@ -170,8 +258,13 @@ class PDFReader:
         pages = self.extract_text(pdf_path)
         return "\n".join(f"\n===== PAGE {i + 1} =====\n{t}" for i, t in enumerate(pages))
 
-    def extract_sections(self, pdf_path: str | Path) -> dict[str, dict]:
+    def extract_sections(self, pdf_path: str | Path, *, lang: str | None = None) -> dict[str, dict]:
         """Extract known sections from the PDF. Returns dict keyed by section id.
+
+        Args:
+            pdf_path: Path to the PDF file.
+            lang: Force language ('cn' or 'en'). If None, auto-detect by trying
+                  both pattern sets and keeping whichever gets more hits.
 
         Each value:
             {
@@ -184,9 +277,30 @@ class PDFReader:
         """
         pages = self.extract_text(pdf_path)
         full = "\n".join(f"__PAGE_{i + 1}__\n{t}" for i, t in enumerate(pages))
+
+        if lang == "cn":
+            return self._extract_with_patterns(full, SECTION_PATTERNS)
+        if lang == "en":
+            return self._extract_with_patterns(full, SECTION_PATTERNS_EN)
+
+        # Auto-detect: try CN first, fall back to EN if too few hits
+        cn_out = self._extract_with_patterns(full, SECTION_PATTERNS)
+        cn_hits = sum(1 for s in cn_out.values() if s["found"])
+        if cn_hits >= _MIN_HITS_THRESHOLD:
+            return cn_out
+
+        en_out = self._extract_with_patterns(full, SECTION_PATTERNS_EN)
+        en_hits = sum(1 for s in en_out.values() if s["found"])
+
+        if en_hits > cn_hits:
+            return en_out
+        return cn_out  # tie or both low → default to CN
+
+    def _extract_with_patterns(self, full: str, patterns: dict[str, dict]) -> dict[str, dict]:
+        """Run section extraction using a specific pattern set."""
         out: dict[str, dict] = {}
 
-        for sec_id, conf in SECTION_PATTERNS.items():
+        for sec_id, conf in patterns.items():
             start_re = re.compile(conf["start"])
             m_start = start_re.search(full)
             if not m_start:
@@ -300,7 +414,10 @@ def main():
     ap = argparse.ArgumentParser(description="Read a financial report PDF.")
     ap.add_argument("pdf_path", help="Path or URL to PDF")
     ap.add_argument("--section", default=None,
-                    help=f"Extract a single section. Choices: {','.join(SECTION_PATTERNS)}")
+                    help=f"Extract a single section. Choices: {','.join(SECTION_PATTERNS)}"
+                    )
+    ap.add_argument("--lang", default=None, choices=["cn", "en"],
+                    help="Force language for section patterns (default: auto-detect)")
     ap.add_argument("--search", default=None, help="Regex to search in full text")
     ap.add_argument("--all-sections", "--regex-sections", action="store_true",
                     dest="all_sections", help="Extract all known sections via regex")
@@ -354,10 +471,11 @@ def main():
         return
 
     if args.section:
-        if args.section not in SECTION_PATTERNS:
-            print(f"Unknown section. Choices: {list(SECTION_PATTERNS)}", file=sys.stderr)
+        all_valid = set(SECTION_PATTERNS) | set(SECTION_PATTERNS_EN)
+        if args.section not in all_valid:
+            print(f"Unknown section. Choices: {sorted(all_valid)}", file=sys.stderr)
             sys.exit(2)
-        sections = r.extract_sections(p)
+        sections = r.extract_sections(p, lang=args.lang)
         s = sections[args.section]
         print(f"# {s['desc']}")
         print(f"found: {s['found']}  pages: {s['start_page']}-{s['end_page']}\n")
@@ -365,7 +483,7 @@ def main():
         return
 
     if args.all_sections or args.out:
-        sections = r.extract_sections(p)
+        sections = r.extract_sections(p, lang=args.lang)
         if args.out:
             Path(args.out).write_text(json.dumps(sections, ensure_ascii=False, indent=2))
             print(f"Saved sections to {args.out}")

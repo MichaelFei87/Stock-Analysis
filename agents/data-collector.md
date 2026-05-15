@@ -61,6 +61,10 @@ python3 -m scripts.technical_analysis {ticker} --name {company} --daily output/{
 python3 -m scripts.financial_audit output/{company}/raw_data
 python3 -m scripts.derived_metrics output/{company}/raw_data --market a  # market=a/us/hk
 
+# ★ v5.1.5 新增 — 港股/美股 yfinance 数据回填 Tushare 格式 parquet
+# 当 income/balancesheet/cashflow/fina_indicator 为空时，从 yf_*_annual.parquet 转换
+python3 -m scripts.yf_adapter output/{company}/raw_data
+
 # ★ v4.8.1 必含 — 8 节确定性数据快照
 python3 -m scripts.data_snapshot --bundle output/{company}/raw_data --out output/{company}/data_snapshot.md --ts-code {resolved_ticker} --company {company}
 ```
