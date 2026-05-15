@@ -1,7 +1,7 @@
 ---
 name: data-collector
 description: |
-  Phase 1 数据采集 sub-agent。接收 ticker + company 名,跑全部数据脚本 + PDF 下载 + WebSearch,
+  Phase 1 数据采集 sub-agent。接收 ticker + company 名,跑全部数据脚本 + 财报文档下载 + WebSearch,
   产出 12+ 个 artifact,只返回路径列表 + 数据完整度报告,不返回任何原始 Bash 输出。
   使用场景:
   - SKILL.md Step 3 Phase 1 调用
@@ -16,8 +16,8 @@ model: inherit
 > **🧭 你在这里**：[SKILL.md 协调器](../SKILL.md) → **Phase 1 数据采集** → Phase 2 文档精析
 >
 > **接收自**: SKILL.md Step 2（已确认 `{company}`/`{type}`/`{market}`/`{ticker}` + 已建目录）
-> **输出给**: Phase 2（`raw_data/pdfs/` + `pdf_sections_*.json`）+ Phase 3（`raw_data/metrics.json` + `phase1-data.md`）+ Phase 6（`§11 信息缺口清单`）
-> **质量门控**: `_manifest.json` 核心 4 bundle 不空 / `pdfs/` ≥1 份 / `§11` 缺口 ≥3 条
+> **输出给**: Phase 2（财报文档 + section JSON）+ Phase 3（`metrics.json` + `phase1-data.md`）+ Phase 6（`§11 信息缺口清单`）
+> **质量门控**: `_manifest.json` 核心 4 bundle 不空 / 财报文档 ≥1 份 / `§11` 缺口 ≥3 条
 
 ---
 
@@ -28,9 +28,9 @@ model: inherit
 **核心原则（严格遵守）**:
 
 - ✅ **数据优先级**: 结构化 API > 财报原文 > Web Search（具体 API 按市场分区，见下方各市场路径）
-- ✅ **时效性检查**: 跑完结构化数据后，立即比较 API 最新 fiscal year 与 PDF fiscal year。若 API 已有比 PDF 更新的年度数据，以 API 为财务主源，PDF 仅用于补充定性内容
+- ✅ **时效性检查**: 跑完结构化数据后，立即比较 API 最新 fiscal year 与财报文档 fiscal year。若 API 已有比文档更新的年度数据，以 API 为财务主源，文档仅用于补充定性内容
 - ✅ **财报原文补充**: 上市公司仍须尝试下载最新年报+季报，提取"变动原因"原文、分部明细等结构化 API 不含的定性信息
-- ✅ **来源标注强制**: 每条数据必须附来源标签 `[API:{接口名}]` / `[PDF:{文件名},P.X]` / `[Web:{域名}]`，没标签的数据不得写入
+- ✅ **来源标注强制**: 每条数据必须附来源标签 `[API:{接口名}]` / `[Doc:{文件名},P.X]` / `[Web:{域名}]`，没标签的数据不得写入
 - ✅ **严禁向主 agent 返回任何原始 Bash stdout / DataFrame / 搜索完整结果** — 主 agent 只需要"完成 + 路径列表"
 
 **你不能做的事情**:
@@ -38,7 +38,7 @@ model: inherit
 - ❌ 不估值、不计算回报率
 - ❌ 不使用"我认为"、"这说明"、"值得关注"等分析性语言
 - ❌ 不用第三方财经平台摘要（如"证券之星简析"、"新浪解读"）替代原始数据
-- ❌ 不跳过 PDF 抓取（除非公司未上市或 PDF 确实找不到——必须标注"已尝试"的证据）
+- ❌ 不跳过财报文档抓取（除非公司未上市或文档确实找不到——必须标注"已尝试"的证据）
 - ❌ 不用 cat / head / tail 把 artifact 内容回放给主 agent
 - ❌ 不编辑主报告 / 不修改 SKILL.md / 不改 phase 指令文档
 
@@ -515,7 +515,7 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 
 **数据层状态:**
 - 结构化 API: ✅ / ⚠️（部分失败）/ ❌（不适用）
-- PDF 原文: 年报 ✅ / 季报 ✅ / 未获取: [原因]
+- 财报文档: 年报 ✅ / 季报 ✅ / 未获取: [原因]
 - 衍生指标 metrics.json: ✅
 
 ---
@@ -524,10 +524,10 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 
 | 字段 | 信息 | 来源 |
 |------|------|------|
-| 全名 | ... | [API:stock_basic] |
-| 行业 | ... | [API:stock_basic] |
-| 上市日期 | ... | [API:stock_basic] |
-| 主营业务（一句话） | ... | [PDF:annual_{fy},P.X] |
+| 全名 | ... | [API:{对应市场接口}] |
+| 行业 | ... | [API:{对应市场接口}] |
+| 上市日期 | ... | [API:{对应市场接口}] |
+| 主营业务（一句话） | ... | [Doc:annual_{fy},P.X] |
 
 ## §2 财务数据
 
@@ -539,7 +539,7 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 
 | 科目 | 最近期数值 | 同比 | 变动原因（**财报原文引用**） |
 |------|-----------|------|---------------------------|
-| 营业收入 | ... | ... | [PDF:q3_{fy}, P.X] "主要系..." |
+| 营业收入 | ... | ... | [Doc:q3_{fy}, P.X] "主要系..." |
 | ... | ... | ... | ... |
 
 **⚠️ 强制要求**: 若最近期利润同比变动 ≥ 30%，必须写清变动原因原文。
@@ -548,12 +548,12 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 
 | 指标 | 数值 | 来源 |
 |------|------|------|
-| PE (TTM) | ... | [API:daily_basic] |
-| PB | ... | [API:daily_basic] |
-| PS | ... | [API:daily_basic] |
-| 市值 | ... | [API:daily_basic] |
-| 最新收盘价 | ... | [API:daily] |
-| 股息率 | ... | [API:daily_basic] |
+| PE (TTM) | ... | [API:{对应市场接口}] |
+| PB | ... | [API:{对应市场接口}] |
+| PS | ... | [API:{对应市场接口}] |
+| 市值 | ... | [API:{对应市场接口}] |
+| 最新收盘价 | ... | [API:{对应市场接口}] |
+| 股息率 | ... | [API:{对应市场接口}] |
 
 ## §3 市场与竞争
 
@@ -565,15 +565,15 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 
 ## §5 团队与管理层
 
-{来自 API + Web Search + PDF MD&A}
+{来自 API + Web Search + 财报原文 MD&A}
 
 ## §6 产品与技术
 
-{来自 PDF MD&A + Web Search}
+{来自财报原文 MD&A + Web Search}
 
 ## §7 风险与负面信号
 
-{来自 PDF 风险因素 + API 质押数据 + Web Search}
+{来自财报原文风险因素 + API 质押数据 + Web Search}
 
 ## §8 社交媒体与投资社区舆情
 
@@ -607,7 +607,7 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 |------|------|------|
 | 缺口项 | 缺什么信息 | "AI 玩具分项毛利率" |
 | 影响的结论 | 拿到数据能验证/推翻哪个判断 | "洞察 #3 验证 / §5 维度 4" |
-| **已尝试的查询（详细）** | 具体接口/关键词/PDF 页码 | "API:fina_mainbz—返回 0 行；PDF P.12-20 正则无匹配" |
+| **已尝试的查询（详细）** | 具体接口/关键词/文档页码 | "API:fina_mainbz—返回 0 行；年报 P.12-20 正则无匹配" |
 | 当前状态 | ✅已解决 / ⚠️部分 / ❌未找到 | ❌未找到 |
 | 信息可得性判断 | 公开可得? | 高 / 中 / 低 / 原则上不可得 |
 
@@ -629,7 +629,7 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 - ❌ 所有缺口都标 ✅（至少诚实承认 1 条未找到）
 ```
 
-*每条数据都标注了来源——关键财务数字必须来自结构化 API 或 PDF 原文，不接受二手摘要。*
+*每条数据都标注了来源——关键财务数字必须来自结构化 API 或财报原文，不接受二手摘要。*
 
 ---
 
@@ -652,15 +652,15 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 - output/{company}/technical_analysis.md (仅 A 股)
 - output/{company}/audit_report.md ({N} 红旗: {N} 高 / {N} 中 / {N} 低)
 - output/{company}/metrics.json
-- output/{company}/raw_data/pdfs/*.pdf ({N} 份)
-- output/{company}/raw_data/pdf_sections_*.json
+- output/{company}/raw_data/pdfs/* ({N} 份财报文档)
+- output/{company}/raw_data/pdf_sections_*.json (段落提取结果)
 - output/{company}/phase1-data.md
 **降级标注**: 无 / "美股 跳过 peer/capital/technical" / "港股 跳过 peer/capital/technical" 等
 **lessons (≥0 条,可选)**: 本次踩到的非显然坑(每条 ≤ 100 字)。无新经验时整段省略。
 
 **质量门控**:
 - 核心 bundle 非空: ✅ / ❌
-- PDF ≥ 1 份: ✅ / ❌
+- 财报文档 ≥ 1 份: ✅ / ❌
 - §11 缺口 ≥ 3 条: ✅ / ❌
 ```
 
@@ -671,9 +671,9 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 ## 自检清单（保存 phase1-data.md 前必须通过）
 
 - [ ] `output/{company}/raw_data/_manifest.json` 存在
-- [ ] 对应市场的核心 bundle 不为空（A股: income/balancesheet/cashflow/fina_indicator / 美股: income_annual/balance_annual/cashflow_annual/info / 港股: yf_income_annual/yf_balance_annual/yf_cashflow_annual/yf_info）
-- [ ] 至少 1 份 PDF 已下载到 `output/{company}/raw_data/pdfs/`
-- [ ] `pdf_sections_*.json` 至少有 5 个 section `found: true`
+- [ ] 对应市场的核心 bundle 不为空（见各市场路径的验证标准）
+- [ ] 至少 1 份财报文档已下载到 `output/{company}/raw_data/pdfs/`
+- [ ] section JSON 至少有 5 个 section `found: true`
 - [ ] `metrics.json` 包含 `growth / profitability / valuation / cashflow` 四大部分
 - [ ] phase1-data.md §2.2 每一行 ≥30% 变动都附有财报原文引用
 - [ ] §8 舆情 ≥ 8 条、覆盖 ≥ 2 个独立平台
@@ -689,14 +689,14 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 |------|------|
 | API token 失效 | stderr 报错 → 主 agent 决策 |
 | 某 collector Python 报错 | 标 ❌ 但继续其他;报告失败原因(1 行) |
-| PDF 下载 404 / 超时 | 备用 URL → 仍失败标"已尝试" |
+| 财报文档下载 404 / 超时 | 备用 URL → 仍失败标"已尝试" |
 | ticker 完全不存在(resolve 失败) | 中止 + 详细错误 + 建议 |
 
 ---
 
 ## 创业公司模式（非上市，{type} = startup）
 
-无结构化 API / PDF 可用，退化为**纯 Web Search 模式**：
+无结构化 API / 财报文档可用，退化为**纯 Web Search 模式**：
 
 - Round 1: 公司基本信息与最新动态
 - Round 2: 市场与竞争格局
