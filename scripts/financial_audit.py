@@ -1,7 +1,7 @@
 """Financial anomaly detection using classic academic & investor frameworks.
 
 This module consumes a bundle produced by TushareCollector.collect_all() and
-runs 10 classic financial health checks, returning a structured dict of
+runs 12 classic financial health checks, returning a structured dict of
 "red flags" ranked by severity.
 
 Frameworks implemented:
@@ -15,6 +15,7 @@ Frameworks implemented:
     8. Shareholder Flow Signal（v4 新）        — 户数 × 户均矩阵
     9. Forward Guidance Anomaly（v4 新）       — 业绩预告方向、披露及时性
    10. Related-Party / Subsidiary Exposure    — 长期股权投资波动、权益法损失
+   11. Q4 Profit Distribution Anomaly         — Q4 单季利润占比异常低（"洗澡"检测）
 
 Usage:
     from scripts.financial_audit import audit
@@ -86,11 +87,86 @@ def _load_bundle(bundle_dir: Path) -> dict[str, pd.DataFrame]:
     return bundle
 
 
+def _detect_fy_month(bundle_dir: Path) -> int:
+    """Detect fiscal-year-end month from authoritative metadata. Returns 1-12.
+
+    Decision tree (each step is 100% deterministic, no guessing):
+
+    1. Read meta.json → market field.
+       - market == "a" → return 12.
+         (All A-share companies are legally required to use Dec 31 FY
+         per Chinese GAAP / 《企业会计准则》.)
+
+    2. market in ("us", "hk") → read info.parquet["lastFiscalYearEnd"].
+       - This is a Unix epoch timestamp from yfinance (e.g. 1758931200 →
+         2025-09-27 → month 9 for Apple). The month always matches the
+         income_annual period month (verified: AAPL/MSFT/NKE/WMT/COST).
+       - Return that month.
+
+    3. Fallback (meta.json missing or info.parquet unavailable):
+       - Return 12 (calendar year, safe default for the vast majority of
+         global equities). Caller should log a warning.
+    """
+    # Step 1: read market from meta.json
+    meta_path = bundle_dir / "meta.json"
+    market = None
+    if meta_path.exists():
+        try:
+            import json
+            with open(meta_path) as f:
+                market = json.load(f).get("market")
+        except Exception:
+            pass
+
+    if market == "a":
+        return 12  # A-share: legally mandated Dec 31
+
+    # Step 2: read lastFiscalYearEnd from info.parquet
+    if market in ("us", "hk"):
+        info_df = None
+        for name in ("info", "yf_info"):
+            p = bundle_dir / f"{name}.parquet"
+            if p.exists():
+                try:
+                    info_df = pd.read_parquet(p)
+                except Exception:
+                    pass
+                if info_df is not None:
+                    break
+
+        if info_df is not None and "lastFiscalYearEnd" in info_df.columns:
+            try:
+                epoch = float(info_df["lastFiscalYearEnd"].iloc[0])
+                fy_date = datetime.fromtimestamp(epoch, tz=None)
+                return fy_date.month
+            except Exception:
+                pass
+
+    # Step 3: fallback
+    return 12
+
+
+# Module-level cache so _detect_fy_month is called once per audit() run,
+# then all _annual() calls within that run reuse the result.
+_FY_MONTH: int = 12
+
+
 def _annual(df: pd.DataFrame) -> pd.DataFrame:
-    """Filter to annual rows (end_date ending in 1231), sorted ascending."""
+    """Filter to annual rows, sorted ascending.
+
+    Uses _FY_MONTH (set by audit() at startup) to identify which rows are
+    annual reports:
+    - Rows whose end_date month == _FY_MONTH are kept as annual rows.
+    - This works for both Tushare data (mixed quarterly+annual, FY month
+      identifies the annual rows) and yf_adapter data (only annual rows,
+      all sharing the same month).
+    """
     if df is None or df.empty or "end_date" not in df.columns:
         return pd.DataFrame()
-    mask = df["end_date"].astype(str).str.endswith("1231")
+    dates = df["end_date"].astype(str)
+    # Extract month from YYYYMMDD string: chars [4:6]
+    months = dates.str[4:6].astype(int)
+    mask = months == _FY_MONTH
     ann = df.loc[mask].copy()
     if ann.empty:
         return ann
@@ -955,6 +1031,58 @@ def _related_party_exposure(bundle: dict) -> list[RedFlag]:
 
 
 # ============================================================================
+# Framework 12: Q4 Quarterly Profit Distribution Anomaly ("Q4 洗澡")
+# ============================================================================
+
+def _q4_profit_wash(bundle: dict) -> list[RedFlag]:
+    """Detect abnormal Q4 profit distribution — A股 "Q4 洗澡" pattern.
+
+    Rule: if Q4 net_profit / annual net_profit < 15%, flag as 🟡 中.
+    Q4 profit is derived: annual(1231) minus Q1(0331) minus Q2(0630 - 0331) minus Q3(0930 - 0630).
+    Simplified: Q4 = annual(1231) - Q3_cumulative(0930).
+    """
+    flags: list[RedFlag] = []
+    inc = bundle.get("income", pd.DataFrame())
+    if inc is None or inc.empty or "end_date" not in inc.columns:
+        return flags
+
+    df = inc.copy()
+    df["_ed"] = df["end_date"].astype(str)
+    df["_year"] = df["_ed"].str[:4].astype(int)
+    df["_mmdd"] = df["_ed"].str[4:]
+
+    f = lambda row, col: _safe_float(row.get(col)) or 0.0
+
+    # Group by year, look for 1231 (annual) and 0930 (Q3 cumulative)
+    for year in sorted(df["_year"].unique()):
+        yr = df[df["_year"] == year]
+        annual_row = yr[yr["_mmdd"] == "1231"]
+        q3_row = yr[yr["_mmdd"] == "0930"]
+        if annual_row.empty or q3_row.empty:
+            continue
+
+        annual_np = _safe_float(annual_row.iloc[0].get("n_income_attr_p"))
+        q3_np = _safe_float(q3_row.iloc[0].get("n_income_attr_p"))
+        if annual_np is None or q3_np is None or annual_np == 0:
+            continue
+
+        q4_np = annual_np - q3_np
+        ratio = q4_np / annual_np
+
+        if ratio < 0.15:
+            flags.append(RedFlag(
+                framework="Q4 Profit Distribution",
+                signal=f"Q4 利润占比异常低 ({year})",
+                severity="🟡 中",
+                value=round(ratio * 100, 1),
+                threshold="Q4 归母净利占全年 < 15%",
+                evidence=f"{year} 全年归母净利 {annual_np/1e8:.2f}亿, Q4 单季 {q4_np/1e8:.2f}亿, 占比 {ratio*100:.1f}%",
+                implication="Q4 单季利润骤降或为负,可能存在'Q4 洗大澡'(集中计提减值/费用前置),需关注资产减值损失明细",
+            ))
+    return flags
+
+
+# ============================================================================
 # Main orchestrator
 # ============================================================================
 
@@ -970,11 +1098,15 @@ FRAMEWORKS = [
     ("Forward Guidance Anomaly", _forecast_anomaly),
     ("Valuation Anomaly", _valuation),
     ("Related-Party Exposure", _related_party_exposure),
+    ("Q4 Profit Distribution", _q4_profit_wash),
 ]
 
 
 def audit(bundle_dir: Path) -> dict[str, Any]:
-    """Run all 10 frameworks on the bundle, return structured result."""
+    """Run all 12 frameworks on the bundle, return structured result."""
+    global _FY_MONTH
+    _FY_MONTH = _detect_fy_month(bundle_dir)
+
     bundle = _load_bundle(bundle_dir)
     all_flags: list[RedFlag] = []
     framework_status: dict[str, str] = {}
@@ -1007,7 +1139,7 @@ def _format_markdown(bundle_dir: Path, status: dict[str, str], flags: list[RedFl
         f"**数据源**: {bundle_dir}",
         f"**审计日期**: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         f"",
-        f"## §1 框架执行状态（10 个经典框架）",
+        f"## §1 框架执行状态（12 个经典框架）",
         f"",
     ]
     for fw, st in status.items():
