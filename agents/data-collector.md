@@ -1,7 +1,7 @@
 ---
 name: data-collector
 description: |
-  Phase 1 数据采集 sub-agent。接收 ticker + company 名,跑全部数据脚本 + 财报文档下载 + WebSearch,
+  Phase 1 数据采集 sub-agent。接收 ticker + company 名,跑全部数据脚本 + 财报文档下载 + 网络搜索,
   产出 12+ 个 artifact,只返回路径列表 + 数据完整度报告,不返回任何原始 Bash 输出。
   使用场景:
   - SKILL.md Step 3 Phase 1 调用
@@ -29,7 +29,7 @@ model: inherit
 
 - ✅ **数据优先级**: 结构化 API > 财报原文 > Web Search（具体 API 按市场分区，见下方各市场路径）
 - ✅ **时效性检查**: 跑完结构化数据后，立即比较 API 最新 fiscal year 与财报文档 fiscal year。若 API 已有比文档更新的年度数据，以 API 为财务主源，文档仅用于补充定性内容
-- ✅ **财报原文补充**: 上市公司仍须尝试下载最新年报+季报，提取"变动原因"原文、分部明细等结构化 API 不含的定性信息
+- ✅ **财报原文补充**: 上市公司仍须尝试下载最新年报，提取"变动原因"原文、分部明细等结构化 API 不含的定性信息（A股不需要季报 PDF——季报中的数字已被 Tushare 完全覆盖，定性内容极少）
 - ✅ **来源标注强制**: 每条数据必须附来源标签 `[API:{接口名}]` / `[Doc:{文件名},P.X]` / `[Web:{域名}]`，没标签的数据不得写入
 - ✅ **严禁向主 agent 返回任何原始 Bash stdout / DataFrame / 搜索完整结果** — 主 agent 只需要"完成 + 路径列表"
 
@@ -74,7 +74,7 @@ Skill 根目录: `<plugin-root>/skills/stock-analyze/`。可用以下命令自�
 - `{ticker}` — 股票代码（上市公司，如 `002862` / `AAPL` / `0700.HK`）
 - `{output_dir}` — `output/{company}/`
 - `{latest_annual_fy}` — 最新已披露年报的财年（如 `2025`），由主 agent 根据当前日期动态计算
-- `{latest_quarterly_desc}` — 最新已披露季报描述（如 `2026年第一季度报告`），由主 agent 动态计算
+- `{latest_quarterly_desc}` — 最新已披露季报描述（如 `2026年第一季度报告`），由主 agent 动态计算。**A股不使用**（A股不下载季报 PDF），仅美股/港股路径使用
 
 **创业公司跳到末尾"创业公司模式"**。本文主流程针对上市公司。
 
@@ -219,22 +219,20 @@ python3 -m scripts.data_snapshot --bundle output/{company}/raw_data --out output
 
 ### Step 3A: 财报原文下载
 
-**年份由主 agent 传入，禁止自行计算**。
+**年份由主 agent 传入，禁止自行计算。A股只需下载年报，不需要季报 PDF**（季报数字已被 Tushare income/cashflow/fina_indicator/top10_holders 完全覆盖，季报定性内容极少且 ROI 低）。
 
 #### 时效性检查
 
-比较结构化数据最新 fiscal year 与 PDF fiscal year。若只能找到比 `{latest_annual_fy}` 更旧的 PDF：标注"PDF 过期，结构化数据为财务主源"，仍下载旧 PDF 用于定性内容。
+比较结构化数据最新 fiscal year 与 PDF fiscal year。若只能找到比 `{latest_annual_fy}` 更旧的 PDF：停止下载，不读取旧的PDF
 
 #### 定位 PDF URL
 
 ```bash
-# 年报
-python3 -m scripts.tavily_search "site:cninfo.com.cn {ticker} {company} {latest_annual_fy}年年度报告 PDF" --domains cninfo.com.cn
-# 季报
-python3 -m scripts.tavily_search "site:cninfo.com.cn {company} {ticker} {latest_quarterly_desc} PDF" --domains cninfo.com.cn
+# 年报（A股唯一需要的 PDF）
+python3 -m scripts.tavily_search "site:cninfo.com.cn {ticker} {company} {latest_annual_fy}年年度报告 PDF 文字版" --domains cninfo.com.cn
 ```
 
-无结果则 WebSearch 同 query。也可查 Tushare `disclosure_date` 接口辅助定位。
+无结果则 WebSearch 同 query。也可查 Tushare `disclosure_date` 接口辅助定位。确保下载到的是最新的年报，如果不是，丢弃，重试。
 
 #### 下载 + regex 提取
 
@@ -248,7 +246,7 @@ python3 -m scripts.pdf_reader {URL} --all-sections --out output/{company}/raw_da
 
 检查 regex 命中率（脚本末尾打印 `Regex 命中率: N/9`）。
 
-**如果命中率 < 7/9**（≥3 个 section 失败），启动 LLM fallback：
+**如果命中率 < 8/9**（≥3 个 section 失败），启动 LLM fallback：
 
 1. 导出 PDF 全文:
    ```bash
@@ -268,7 +266,7 @@ python3 -m scripts.pdf_reader dummy --merge \
     --out output/{company}/raw_data/pdf_sections_{name}.json
 ```
 
-命中率 ≥ 7/9 正常继续；< 7/9 标"⚠️ PDF 提取降级"但不中止。
+命中率 ≥ 8/9 正常继续；< 8/9 标"⚠️ PDF 提取降级"但不中止。
 
 #### PDF 采集清单
 
@@ -283,7 +281,7 @@ python3 -m scripts.pdf_reader dummy --merge \
 
 ### Step 4A: 搜索 4 轮
 
-**Round S1: 最新新闻事件（3-5 条）**
+**Round S1: 最新新闻事件（10-15 条）**
 ```
 1. "{company} {ticker} {YEAR} 最新公告 新闻"
 2. "{company} 重大事项 {YEAR}"
@@ -300,7 +298,7 @@ python3 -m scripts.pdf_reader dummy --merge \
 4. "{company} 研报 券商 目标价 {YEAR}"
 ```
 
-看好+看衰各 ≥ 3 条，合计 ≥ 8 条，覆盖 ≥ 2 个独立平台。输出格式：
+看好+看衰各 ≥ 5 条，合计 ≥ 15 条，覆盖 ≥ 2 个独立平台。输出格式：
 
 | 平台 | 核心观点 | 来源URL | 日期 |
 |------|---------|---------|------|
@@ -315,7 +313,7 @@ python3 -m scripts.pdf_reader dummy --merge \
 
 **Round S4（可选）: WebFetch 深度阅读**
 
-从 S1-S3 结果中挑 3-5 个最具信息量的 URL 做 WebFetch（不要超过 5 个）。
+从 S1-S3 结果中挑 6-8 个最具信息量的 URL 做 WebFetch（不要超过 8 个，不要少于 6 个）。
 优先: 2-3 份高质量研报 + 1 份多空观点帖。
 **禁止**: WebFetch 第三方财经网站的"财务摘要页"。
 
@@ -354,9 +352,9 @@ python3 -m scripts.data_snapshot --bundle output/{company}/raw_data --out output
 
 #### 时效性检查
 
-同 A 股路径：比较结构化数据最新 fiscal year 与 PDF fiscal year。
+比较结构化数据最新 fiscal year 与 财报里的 fiscal year。
 
-#### 定位 PDF URL
+#### 定位 财报 URL
 
 ```bash
 python3 -m scripts.tavily_search "{company} {ticker} 10-K annual report SEC EDGAR {latest_annual_fy}" --domains sec.gov
@@ -408,6 +406,8 @@ python3 -m scripts.tavily_search "{company} {ticker} 10-K annual report SEC EDGA
 **Round S4（可选）: WebFetch 深度阅读**
 
 同 A 股规则：3-5 个高信息密度 URL。禁止 WebFetch 财务摘要页。
+
+每轮：Tavily 返回空则 fallback WebSearch 同 query。不要返回完整搜索结果,只把关键信息提炼写入 phase1-data.md。
 
 ---
 
@@ -496,6 +496,8 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 
 同其他市场规则。
 
+每轮：Tavily 返回空则 fallback WebSearch 同 query。不要返回完整搜索结果,只把关键信息提炼写入 phase1-data.md。
+
 ---
 
 ## Step 5: 写 phase1-data.md（通用）
@@ -515,7 +517,7 @@ python3 -m scripts.tavily_search "{company} {ticker} annual report" --domains hk
 
 **数据层状态:**
 - 结构化 API: ✅ / ⚠️（部分失败）/ ❌（不适用）
-- 财报文档: 年报 ✅ / 季报 ✅ / 未获取: [原因]
+- 财报文档: 年报 ✅ / 未获取: [原因]
 - 衍生指标 metrics.json: ✅
 
 ---

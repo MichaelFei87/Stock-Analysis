@@ -99,13 +99,27 @@ def collect_capital_flow(
         end_date=end_date,
     )
 
-    # ---------- 3. 陆股通个股持股每日 ----------
-    raw["hk_hold"] = _safe_call(
-        pro.hk_hold,
-        ts_code=target_code,
-        start_date=start_date,
-        end_date=end_date,
-    )
+    # ---------- 3. 陆股通个股持股 ----------
+    # 2024-08-20 起港交所停止每日披露, 改为季度披露 (季末日期才有数据)
+    # 策略: 查最近 4 个季末快照
+    _quarter_ends = []
+    _today = dt.date.today()
+    for _yr in range(_today.year - 1, _today.year + 1):
+        for _m, _d in [(3, 31), (6, 30), (9, 30), (12, 31)]:
+            _qd = dt.date(_yr, _m, _d)
+            if _qd <= _today:
+                _quarter_ends.append(_qd.strftime("%Y%m%d"))
+    _quarter_ends = sorted(_quarter_ends)[-4:]  # 最近 4 个季末
+
+    _exchange = "SZ" if ".SZ" in target_code else "SH"
+    _hk_dfs = []
+    for _qd in _quarter_ends:
+        _df = _safe_call(pro.hk_hold, trade_date=_qd, exchange=_exchange)
+        if not _df.empty:
+            _row = _df[_df["ts_code"] == target_code]
+            if not _row.empty:
+                _hk_dfs.append(_row)
+    raw["hk_hold"] = pd.concat(_hk_dfs, ignore_index=True) if _hk_dfs else pd.DataFrame()
 
     # ---------- 4. 两融明细 ----------
     raw["margin_detail"] = _safe_call(
@@ -297,28 +311,30 @@ def _derive_metrics(target_code: str, raw: dict) -> dict[str, Any]:
         else:
             m["chip_concentration"] = "⚪ 筹码平稳"
 
-    # 3. 陆股通持仓趋势
+    # 3. 陆股通持仓趋势 (季度快照, 2024-08 起仅季末数据)
     hkh = raw["hk_hold"]
-    if not hkh.empty and "hold_ratio" in hkh.columns:
+    _ratio_col = "ratio" if "ratio" in hkh.columns else "hold_ratio" if "hold_ratio" in hkh.columns else None
+    if not hkh.empty and _ratio_col:
         hkh_sorted = hkh.sort_values("trade_date", ascending=False)
-        latest_hk_ratio = hkh_sorted.iloc[0]["hold_ratio"]
-        m["hsgt_ratio_latest"] = round(float(latest_hk_ratio), 3)
+        latest_hk_ratio = float(hkh_sorted.iloc[0][_ratio_col])
+        m["hsgt_ratio_latest"] = round(latest_hk_ratio, 3)
         m["hsgt_date_latest"] = hkh_sorted.iloc[0]["trade_date"]
-        # 20 日和 60 日变化
-        if len(hkh_sorted) >= 20:
-            hk_20 = hkh_sorted.iloc[19]["hold_ratio"]
-            m["hsgt_ratio_change_20d"] = round(float(latest_hk_ratio) - float(hk_20), 3)
-        if len(hkh_sorted) >= 60:
-            hk_60 = hkh_sorted.iloc[59]["hold_ratio"]
-            m["hsgt_ratio_change_60d"] = round(float(latest_hk_ratio) - float(hk_60), 3)
-        # 方向判定
-        chg_20 = m.get("hsgt_ratio_change_20d", 0)
-        if chg_20 > 0.3:
-            m["hsgt_direction"] = "🟢 外资近 20 日加仓"
-        elif chg_20 < -0.3:
-            m["hsgt_direction"] = "🔴 外资近 20 日减仓"
+        # 季度环比变化 (用最近两个季末对比, 替代原来的 20/60 日对比)
+        if len(hkh_sorted) >= 2:
+            prev_ratio = float(hkh_sorted.iloc[1][_ratio_col])
+            m["hsgt_ratio_change_1q"] = round(latest_hk_ratio - prev_ratio, 3)
+            m["hsgt_date_prev"] = hkh_sorted.iloc[1]["trade_date"]
+        if len(hkh_sorted) >= 4:
+            oldest_ratio = float(hkh_sorted.iloc[-1][_ratio_col])
+            m["hsgt_ratio_change_4q"] = round(latest_hk_ratio - oldest_ratio, 3)
+        # 方向判定 (基于季度环比)
+        chg_1q = m.get("hsgt_ratio_change_1q", 0)
+        if chg_1q > 0.3:
+            m["hsgt_direction"] = "🟢 外资近一季加仓"
+        elif chg_1q < -0.3:
+            m["hsgt_direction"] = "🔴 外资近一季减仓"
         else:
-            m["hsgt_direction"] = "⚪ 外资近 20 日平稳"
+            m["hsgt_direction"] = "⚪ 外资近一季平稳"
 
     # 4. 两融杠杆方向: 融资余额占流通市值分位
     md = raw["margin_detail"]
@@ -436,7 +452,8 @@ def _derive_metrics(target_code: str, raw: dict) -> dict[str, Any]:
     # 公式: cost = Σ (Δhold_share_i × close_i) / Σ Δhold_share_i  (只看净增仓部分)
     hkh = raw.get("hk_hold", pd.DataFrame())
     daily_full = raw.get("daily_basic", pd.DataFrame())
-    if not hkh.empty and not daily_full.empty and "hold_share" in hkh.columns and "close" in daily_full.columns:
+    _vol_col = "vol" if "vol" in hkh.columns else "hold_share" if "hold_share" in hkh.columns else None
+    if not hkh.empty and not daily_full.empty and _vol_col and "close" in daily_full.columns:
         hkh_sorted = hkh.sort_values("trade_date").reset_index(drop=True)
         daily_close_map = daily_full[["trade_date", "close"]].set_index("trade_date")["close"].to_dict()
 
@@ -444,8 +461,8 @@ def _derive_metrics(target_code: str, raw: dict) -> dict[str, Any]:
         weighted_cost_den = 0.0
         for i in range(1, len(hkh_sorted)):
             try:
-                prev = float(hkh_sorted.iloc[i - 1]["hold_share"])
-                curr = float(hkh_sorted.iloc[i]["hold_share"])
+                prev = float(hkh_sorted.iloc[i - 1][_vol_col])
+                curr = float(hkh_sorted.iloc[i][_vol_col])
                 delta = curr - prev
                 if delta <= 0:
                     continue  # 只看净增仓
@@ -512,7 +529,7 @@ def _format_markdown(target_code: str, raw: dict, m: dict) -> str:
         ("主力控盘度 (总股本口径)", m.get("control_level"), f"{top10_source}合计 **{top10_pct}%**"),
         ("★ 实控人家族合计持股", fam_line, fam_detail),
         ("筹码集中度 (流通股动态)", m.get("chip_concentration"), f"户数变化 {m.get('holder_num_change', 'N/A')}%"),
-        ("陆股通(北向)", m.get("hsgt_direction"), f"持仓 {m.get('hsgt_ratio_latest', 'N/A')}% / 20 日变化 {m.get('hsgt_ratio_change_20d', 'N/A')}pp"),
+        ("陆股通(北向)", m.get("hsgt_direction"), f"持仓 {m.get('hsgt_ratio_latest', 'N/A')}% / 季度环比 {m.get('hsgt_ratio_change_1q', 'N/A')}pp"),
         ("两融杠杆", m.get("margin_signal"), f"融资余额 {m.get('margin_rzye_latest_wan', 'N/A')} 万元, 相对近 60 日中位 {m.get('margin_vs_median', 'N/A')}%"),
         ("主力资金流", m.get("main_capital_signal"), f"近 20 日净流入天数 {m.get('main_capital_inflow_days_20', 'N/A')} / 20"),
         ("龙虎榜机构", m.get("inst_signal"), f"近 30 日上榜 {m.get('top_list_count_30d', 0)} 次"),
@@ -614,11 +631,11 @@ def _format_markdown(target_code: str, raw: dict, m: dict) -> str:
     hkh = raw["hk_hold"]
     if not hkh.empty:
         lines.append(f"**最新持仓比例**: {m.get('hsgt_ratio_latest', 'N/A')}% ({m.get('hsgt_date_latest', 'N/A')})")
-        ch20 = m.get("hsgt_ratio_change_20d")
-        ch60 = m.get("hsgt_ratio_change_60d")
-        ch20_s = f"{ch20:+.3f}" if isinstance(ch20, (int, float)) else "N/A"
-        ch60_s = f"{ch60:+.3f}" if isinstance(ch60, (int, float)) else "N/A"
-        lines.append(f"**20 日变化**: {ch20_s} pp · **60 日变化**: {ch60_s} pp")
+        ch1q = m.get("hsgt_ratio_change_1q")
+        ch4q = m.get("hsgt_ratio_change_4q")
+        ch1q_s = f"{ch1q:+.3f}" if isinstance(ch1q, (int, float)) else "N/A"
+        ch4q_s = f"{ch4q:+.3f}" if isinstance(ch4q, (int, float)) else "N/A"
+        lines.append(f"**季度环比变化**: {ch1q_s} pp · **近 4 季变化**: {ch4q_s} pp")
         lines.append(f"**判定**: {m.get('hsgt_direction', '数据不足')}")
     else:
         lines.append("*陆股通数据不足*")
