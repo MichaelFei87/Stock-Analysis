@@ -12,7 +12,7 @@
     - 头部插入 "★ Phase 3 必读规则" 强约束, 同时在 anti_lazy_lint Rule 3 加入此 artifact 的
       关键短语检查作为 safety net
 
-输出 8 节:
+输出 9 节:
     §1 数据完整度 — 每张表行数 / end_date 区间 / 最新期
     §2 最新期完整快照 — income / balance / cashflow / fina_indicator 最新行关键字段
     §3 多年趋势完整表 — 每个 distinct end_date 一行 (LLM 写主报告 §四 财务趋势表的源头)

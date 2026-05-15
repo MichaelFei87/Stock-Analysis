@@ -40,7 +40,7 @@ fi
 FILES=$(echo "$TREE_JSON" | python3 -c "
 import json, sys
 tree = json.load(sys.stdin)['tree']
-skip = {'install.sh', 'CLAUDE.md', 'README.md', 'CHANGELOG.md', 'LICENSE', '.gitignore', '.github'}
+skip = {'install.sh', 'uninstall.sh', 'CLAUDE.md', 'README.md', 'CHANGELOG.md', 'LICENSE', '.gitignore', '.github'}
 for item in tree:
     if item['type'] != 'blob':
         continue
