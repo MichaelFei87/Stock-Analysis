@@ -129,6 +129,7 @@ python3 -m scripts.hk_collector {ticker} --name {company}
 ```bash
 python3 -m scripts.peer_collector {ticker} \
     --peers 5 \
+    --name {company} \
     --out output/{company}/peer_analysis.md
 ```
 
@@ -153,15 +154,15 @@ python3 -m scripts.peer_collector {ticker} \
 
 ```bash
 python3 -m scripts.capital_flow {ticker} \
-    --days 60 \
+    --days 90 \
     --out output/{company}/capital_flow.md
 ```
 
 **数据源**(Tushare 2000+ 积分):
-- `moneyflow` — 个股每日主力(超大单+大单)资金流向,近 60 日
+- `moneyflow` — 个股每日主力(超大单+大单)资金流向,近 90 日
 - `moneyflow_hsgt` — 陆股通整体流向(背景参考)
-- `hk_hold` — 陆股通个股持股每日明细,近 60 日
-- `margin_detail` — 个股两融余额,近 60 日
+- `hk_hold` — 陆股通个股持股每日明细,近 90 日
+- `margin_detail` — 个股两融余额,近 90 日
 - `top_list` + `top_inst` — 龙虎榜 + 机构席位,近 30 日
 
 **推导 6 指标**(每个都有"绿/黄/红"自动档位):
@@ -377,7 +378,7 @@ python3 -m scripts.derived_metrics output/{company}/raw_data/ --market {a|us|hk}
 
 ```
 1. "{company} {ticker} {YEAR} 最新公告 新闻"
-2. "{company} 重大事项 2025"
+2. "{company} 重大事项 {YEAR}"
 3. "{company} 并购 / 重组 / 分拆 {YEAR}"
 4. "{company} 业绩预告 / 业绩快报"
 5. "{company} 诉讼 / 监管 / 处罚 {YEAR}"

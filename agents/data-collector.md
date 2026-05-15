@@ -19,7 +19,7 @@ model: inherit
 
 ```bash
 # ★ Tavily 优先 — 支持 site: 过滤,中文效果显著优于内置 WebSearch
-python3 -m scripts.tavily_search "{query}" --domains {domain} --max-results 5
+python3 -m scripts.tavily_search "{query}" --domains {domain} --max-results 20
 ```
 
 如果 Tavily 返回"(无结果)"或报错（如 TAVILY_API_KEY 未设置），再用 `WebSearch "{query}"`。
@@ -67,7 +67,7 @@ python3 -m scripts.tushare_collector {ticker} --name {company}
 ```bash
 # 仅 A 股
 python3 -m scripts.peer_collector {ticker} --peers 5 --name {company} --out output/{company}/peer_analysis.md
-python3 -m scripts.capital_flow {ticker} --days 60 --out output/{company}/capital_flow.md
+python3 -m scripts.capital_flow {ticker} --days 90 --out output/{company}/capital_flow.md
 python3 -m scripts.technical_analysis {ticker} --name {company} --daily output/{company}/raw_data/daily.parquet --out output/{company}/technical_analysis.md
 
 # 全部市场

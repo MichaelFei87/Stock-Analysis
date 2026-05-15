@@ -115,7 +115,7 @@ python3 -m scripts.anti_lazy_lint --md output/{company}/{company}-analysis-{date
 ### ★ 推荐: 直接调用 `scripts/build_html.py`(v4.6.1 一键转换)
 
 ```bash
-python3 -m scripts.build_html --company {company} --version 4.6
+python3 -m scripts.build_html --company {company}
 ```
 
 此脚本会:
@@ -302,7 +302,7 @@ WebFetch http://www.cninfo.com.cn/new/disclosure/stock?stockCode={code}&orgId=..
 
 ```bash
 python3 -m scripts.pdf_reader \
-  output/{company}/raw_data/pdfs/annual_2024.pdf \
+  output/{company}/raw_data/pdfs/annual_{latest_annual_fy}.pdf \
   --search "{关键词正则}"
 ```
 
