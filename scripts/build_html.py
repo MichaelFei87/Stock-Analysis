@@ -41,6 +41,19 @@ except ImportError:
 ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets" / "html"
 
 
+# ---------- 币种适配 ----------
+
+def _currency_info(market: str) -> dict[str, str]:
+    """根据市场返回币种显示信息."""
+    m = (market or "").lower().strip()
+    if m == "us":
+        return {"symbol": "$", "unit_large": "亿美元", "unit_price_prefix": "$", "unit_price_suffix": ""}
+    elif m == "hk":
+        return {"symbol": "HK$", "unit_large": "亿港元", "unit_price_prefix": "HK$", "unit_price_suffix": ""}
+    else:
+        return {"symbol": "¥", "unit_large": "亿", "unit_price_prefix": "", "unit_price_suffix": " 元"}
+
+
 # ---------- 注释块解析 ----------
 
 def _parse_structured_block(text: str, block_name: str) -> dict[str, str]:
@@ -95,8 +108,12 @@ def _tone_class(tone: str | None) -> str:
     return tone or "neutral"
 
 
-def build_rating_trio(data: dict) -> str:
+def build_rating_trio(data: dict, curr: dict | None = None) -> str:
     """从 RATING_TRIO_DATA 注释块构建评级卡 HTML."""
+    if curr is None:
+        curr = _currency_info("")
+    pfx = curr["unit_price_prefix"]
+    sfx = curr["unit_price_suffix"]
     score = data.get("composite_score", "–")
     verdict = data.get("verdict", "–")
     verdict_tone = data.get("verdict_tone", "neutral")
@@ -122,7 +139,7 @@ def build_rating_trio(data: dict) -> str:
   </div>
   <div class="rating-card rating-card--anchor">
     <div class="label">估值锚(DCF 概率加权)</div>
-    <div class="value">{anchor} 元</div>
+    <div class="value">{pfx}{anchor}{sfx}</div>
     <div class="sub">相对当前 {delta_display}</div>
   </div>
   <div class="rating-card rating-card--return{return_card_mod}">
@@ -132,8 +149,10 @@ def build_rating_trio(data: dict) -> str:
   </div>'''
 
 
-def build_metric_strip(data: dict) -> str:
+def build_metric_strip(data: dict, curr: dict | None = None) -> str:
     """从 KEY_METRICS_SIDEBAR 注释块构建横排指标面板 HTML."""
+    if curr is None:
+        curr = _currency_info("")
     if not data:
         return ""
 
@@ -141,7 +160,7 @@ def build_metric_strip(data: dict) -> str:
     fields = [
         ("PE (TTM)",   "pe_ttm",          None),
         ("PB",         "pb",              None),
-        ("市值(亿)",    "market_cap",      None),
+        ("市值",        "market_cap",      None),
         ("ROE",        "roe",             "roe_tone"),
         ("毛利率",      "gross_margin",    None),
         ("资产负债率",   "debt_to_assets",  "debt_tone"),
@@ -159,7 +178,7 @@ def build_metric_strip(data: dict) -> str:
         elif key in ("roe", "gross_margin", "debt_to_assets", "control_ratio"):
             val_display = f"{val}%"
         elif key == "market_cap":
-            val_display = f"{val} 亿"
+            val_display = f"{val} {curr['unit_large']}"
         else:
             val_display = val
         chips.append(
@@ -225,14 +244,37 @@ def build_html(
     _val = metrics.get("valuation", {})
     _prof = metrics.get("profitability", {})
 
-    latest_close = str(_val.get("latest_close", "")) or str(metric_block.get("latest_close", "–"))
+    # 币种适配
+    market = card_block.get("market", "a")
+    curr = _currency_info(market)
+
+    def _fmt_close(v: Any) -> str:
+        """Format close price: round floats to 2dp, pass strings through."""
+        if v is None or v == "":
+            return ""
+        try:
+            return f"{float(v):.2f}"
+        except (ValueError, TypeError):
+            return str(v)
+
+    latest_close = (
+        _fmt_close(_val.get("latest_close"))
+        or _fmt_close(metrics.get("price", {}).get("latest_close"))
+        or _fmt_close(metrics.get("currentPrice"))
+        or str(metric_block.get("latest_close", "–"))
+    )
     market_cap_raw = _val.get("market_cap_wanyuan")
     if market_cap_raw is not None:
         market_cap = f"{market_cap_raw / 10000:.2f}"  # 万元 → 亿
     else:
-        market_cap = str(metric_block.get("market_cap", "–"))
-    pb = str(round(_val.get("pb", 0), 2) if _val.get("pb") else "") or str(metric_block.get("pb", "–"))
-    pe_ttm = str(round(_val.get("pe_ttm", 0), 2) if _val.get("pe_ttm") else "") or str(metric_block.get("pe_ttm", "–"))
+        # 美股: marketCap 在 valuation dict 或顶层, 单位 USD → 亿美元
+        mc_usd = _val.get("marketCap") or metrics.get("marketCap")
+        if mc_usd:
+            market_cap = f"{float(mc_usd) / 1e8:.0f}"  # USD → 亿美元
+        else:
+            market_cap = str(metric_block.get("market_cap", "–"))
+    pb = str(round(_val.get("pb", 0), 2) if _val.get("pb") else "") or str(round(metrics.get("priceToBook", 0), 2) if metrics.get("priceToBook") else "") or str(metric_block.get("pb", "–"))
+    pe_ttm = str(round(_val.get("pe_ttm", 0), 2) if _val.get("pe_ttm") else "") or str(round(metrics.get("trailingPE", 0), 2) if metrics.get("trailingPE") else "") or str(metric_block.get("pe_ttm", "–"))
 
     # anchor_price 来自 Phase 3 估值结论，在 rating_block 注释块中
     anchor_price = rating_block.get("anchor_price") or "–"
@@ -255,21 +297,25 @@ def build_html(
     # 7. 填 rating-trio
     html = html.replace(
         "<!-- PLACEHOLDER: rating_trio - Phase 6 Part B 从主报告 §一 抽取 composite_score / anchor_price / expected_return 填充 -->",
-        build_rating_trio(rating_block),
+        build_rating_trio(rating_block, curr),
     )
 
     # 8. 填 metric-strip
     html = html.replace(
         "<!-- PLACEHOLDER: key_metrics - 5-8 个最关键指标, 每个一个 metric-chip -->",
-        build_metric_strip(metric_block) or "  <!-- 无指标数据 -->",
+        build_metric_strip(metric_block, curr) or "  <!-- 无指标数据 -->",
     )
 
     # 8.5 v4.6.2: 填 preamble 区 (第一个 ## 之前的 blockquote / meta / 段落)
     preamble_html = md_to_html(pre_h2_clean).strip() if pre_h2_clean.strip() else ""
-    html = html.replace(
-        "<!-- PLACEHOLDER: preamble -->",
-        preamble_html or "<!-- 无 preamble 内容 -->",
-    )
+    if preamble_html:
+        html = html.replace("<!-- PLACEHOLDER: preamble -->", preamble_html)
+    else:
+        # 空 preamble: 替换整个 div 为空元素 (CSS :empty 需要绝无内容)
+        html = html.replace(
+            '<div class="preamble">\n<!-- PLACEHOLDER: preamble -->\n</div>',
+            '<div class="preamble"></div>',
+        )
 
     # 9. 填 13 个固定 section placeholder + extra_sections
     # v4.7 fix #5: 每个 section_{i}_* 占位必须唯一,出现 0 或 >1 次都 fail
@@ -306,14 +352,20 @@ def build_html(
     html = html.replace("<!-- PLACEHOLDER: extra_sections -->", extra_html)
 
     # 11. 替换 hero meta 占位
+    pfx = curr["unit_price_prefix"]
+    sfx = curr["unit_price_suffix"]
+    price_display = f"{pfx}{latest_close}{sfx}" if latest_close != "–" else "–"
+    market_cap_display = f"{market_cap} {curr['unit_large']}" if market_cap != "–" else "–"
+    anchor_display = f"{pfx}{anchor_price}{sfx}" if anchor_price != "–" else "–"
+
     replacements = {
         "{{company_name}}": company or "–",
         "{{ticker}}": ticker or "–",
         "{{report_date}}": report_date or "–",
-        "{{latest_close}}": latest_close,
-        "{{market_cap}}": market_cap,
+        "{{price_display}}": price_display,
+        "{{market_cap_display}}": market_cap_display,
         "{{pb}}": pb,
-        "{{anchor_price}}": anchor_price,
+        "{{anchor_display}}": anchor_display,
     }
     for k, v in replacements.items():
         html = html.replace(k, str(v))
@@ -374,8 +426,14 @@ def main():
             print("⚠️  anti_lazy_lint 模块未找到, 跳过深度检查")
 
     try:
+        # 自动探测 metrics.json（与 MD 同目录）
+        metrics_arg = Path(args.metrics) if args.metrics else None
+        if metrics_arg is None:
+            auto_metrics = md_path.parent / "metrics.json"
+            if auto_metrics.exists():
+                metrics_arg = auto_metrics
         html = build_html(md_path, company=args.company, ticker=args.ticker, version=args.version,
-                          metrics_path=Path(args.metrics) if args.metrics else None)
+                          metrics_path=metrics_arg)
     except Exception as e:
         print(f"❌ 构建失败: {e}", file=sys.stderr)
         import traceback; traceback.print_exc()
