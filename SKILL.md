@@ -74,7 +74,7 @@ prompt = f"""[正常评审任务...]
 | 6 Part B/C | HTML + push | 主 agent + Bash | 发布 GitHub Pages |
 | 7 (可选) | 量化监控 | 主 agent 自跑 | monitor_{date}.md |
 
-**8 个 sub-agent**: data-collector / phase3-part{1-5} (5) / reviewer-{narrative,valuation,redflag} (3 并行)。
+**9 个 sub-agent**: data-collector (1) / phase3-part{1-5} (5) / reviewer-{narrative,valuation,redflag} (3 并行)。
 
 **v5.1.4 删除**: Phase 4 多角色(persona-agent)+ Phase 5 差异化洞察 — 9 字段卡片产出云里雾里,3 角色独立分析对决策低价值。主报告 15 章节 → 13(删原 §十二 §十三,§十四→§十二, §十五→§十三)。
 
@@ -210,6 +210,8 @@ Phase 1 (data-collector) → Phase 2 (主 agent) → Phase 3 (5 sub-agent 串行
 | `references/scoring-rubric.md` | 10 维度评分(phase3-part3 内部读) |
 | `references/qualitative-frameworks.md` | 3 框架定性(phase3-part4 读) |
 | `references/valuation-frameworks.md` | Damodaran + SOTP(phase3-part4 读) |
+| `references/html-template-guide.md` | HTML 模板使用指南(build_html 参考) |
+| `references/search-strategy.md` | 年报 PDF 搜索策略(data-collector 参考) |
 
 ### 模板与 schema
 
@@ -234,7 +236,7 @@ Phase 1 (data-collector) → Phase 2 (主 agent) → Phase 3 (5 sub-agent 串行
 
 ### Phase 详细指令(sub-agent 内部参考)
 
-`phases/phase{1-7}-*.md` — 每个 sub-agent 内部 Read 自己的 phase 指令。**主 agent 不直接读 phases 文件**(那是 sub-agent 的内部资料)。
+`phases/phase{2,3,6,7}-*.md`（4 个文件）— 每个 sub-agent 内部 Read 自己的 phase 指令。**主 agent 不直接读 phases 文件**(那是 sub-agent 的内部资料)。Phase 1 由 `agents/data-collector.md` 定义；Phase 4/5 已在 v5.1.4 删除。
 
 ---
 
