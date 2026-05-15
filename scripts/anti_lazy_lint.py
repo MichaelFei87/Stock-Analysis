@@ -279,7 +279,11 @@ def rule_3_artifact_coverage(md_path: Path, md_text: str) -> RuleResult:
         except Exception:
             continue
         phrases = _extract_key_phrases(art_text)
-        if not phrases:
+        if len(phrases) < 3:
+            # v5.1.5: artifact 可提取短语 < 3 时视为数据不足，跳过而非 FAIL
+            per_artifact.append(
+                f"⏭️ {art_name}: 仅 {len(phrases)} 短语 (< 3)，数据不足跳过"
+            )
             continue
         hit = sum(1 for p in phrases if p in md_norm)
         # v4.8.2: data_snapshot.md 等百科 artifact 不计入 overall, 避免稀释

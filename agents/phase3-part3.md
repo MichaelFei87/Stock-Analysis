@@ -34,6 +34,7 @@ model: inherit
 ## 核心约束
 
 - ★ **章节标题逐字复制 skeleton**(见 `references/agent-protocol.md` §5.1,违反触发 Phase 6 修正循环)
+- ★ **严禁外部引用**:不得出现 `详见 xxx.md` / `参见 xxx` / `见附件` / `[xxx](xxx.md)` 等外部链接。所有内容（包括 audit_report 红旗、peer 数据）必须 inline 写入本章节正文。违反将触发 anti_lazy_lint Rule 1 FAIL。
 
 - ★ §六 10 维度每维度都必须打分 + 引用具体数字(不是"良好""一般"的空话)
 - ★ §七 舆情看多 ≥ 3 条 + 看衰 ≥ 3 条(单边 < 3 条 = 单向偏差警告)
