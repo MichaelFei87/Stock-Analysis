@@ -31,6 +31,7 @@ import argparse
 import json
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Iterable
 
@@ -203,32 +204,211 @@ SECTION_PATTERNS_EN: dict[str, dict] = {
     },
 }
 
+# ---- SEC 10-K/10-Q HTM section heading patterns ----
+# US filings use "Item N" headings. Regex runs on *stripped text* (tags removed).
+SECTION_PATTERNS_SEC: dict[str, dict] = {
+    "main_financial_data": {
+        "start": r"(?:Item\s+8|ITEM\s+8)[\.\s\-—]*Financial\s+Statements|Index\s+to\s+Consolidated\s+Financial\s+Statements",
+        "end": [
+            r"(?:Item\s+9|ITEM\s+9)",
+            r"Changes\s+in\s+and\s+Disagreements",
+        ],
+        "desc": "Item 8 — Financial Statements and Supplementary Data",
+    },
+    "non_recurring_items": {
+        "start": r"(?:Non-GAAP|Non‑GAAP|Non\.GAAP)\s+Financial\s+Measures|Reconciliation\s+of\s+(?:Non-GAAP|GAAP\s+to\s+Non-GAAP)|(?:Adjusted\s+EBITDA|Free\s+Cash\s+Flow)\s*\n|Use\s+of\s+Non-GAAP\s+Financial\s+Measures",
+        "end": [
+            r"Liquidity\s+and\s+Capital",
+            r"Critical\s+Accounting",
+            r"(?:Item\s+8|ITEM\s+8)",
+            r"Results\s+of\s+Operations",
+            r"Contractual\s+Obligations",
+        ],
+        "desc": "Non-GAAP Financial Measures / Adjusted metrics (within MD&A)",
+    },
+    "balance_sheet_changes": {
+        "start": r"Consolidated\s+Balance\s+Sheet|CONSOLIDATED\s+BALANCE\s+SHEET|BALANCE\s+SHEETS",
+        "end": [
+            r"Consolidated\s+Statement(?:s)?\s+of\s+(?:Stockholders|Shareholders|Changes\s+in)",
+            r"Consolidated\s+Statement(?:s)?\s+of\s+Cash\s+Flow",
+            r"Notes\s+to\s+(?:the\s+)?Consolidated",
+            r"CASH\s+FLOWS?\s+STATEMENTS",
+            r"STOCKHOLDERS.\s+EQUITY",
+        ],
+        "desc": "Consolidated Balance Sheet",
+    },
+    "income_statement_changes": {
+        "start": r"Consolidated\s+Statement(?:s)?\s+of\s+(?:Operations|Income|Comprehensive\s+Income|Earnings)|CONSOLIDATED\s+STATEMENTS?\s+OF\s+(?:OPERATIONS|INCOME)|INCOME\s+STATEMENTS",
+        "end": [
+            r"Consolidated\s+Balance\s+Sheet",
+            r"CONSOLIDATED\s+BALANCE\s+SHEET",
+            r"BALANCE\s+SHEETS",
+            r"Consolidated\s+Statement(?:s)?\s+of\s+(?:Stockholders|Shareholders|Changes\s+in)",
+            r"COMPREHENSIVE\s+INCOME\s+STATEMENTS",
+        ],
+        "desc": "Consolidated Statements of Operations / Income",
+    },
+    "cashflow_changes": {
+        "start": r"Consolidated\s+Statement(?:s)?\s+of\s+Cash\s+Flow|CONSOLIDATED\s+STATEMENTS?\s+OF\s+CASH\s+FLOW|CASH\s+FLOWS?\s+STATEMENTS",
+        "end": [
+            r"Notes\s+to\s+(?:the\s+)?Consolidated",
+            r"Consolidated\s+Statement(?:s)?\s+of\s+(?:Stockholders|Shareholders|Changes\s+in)",
+            r"STOCKHOLDERS.\s+EQUITY",
+            r"FINANCIAL\s+STATEMENTS\s+AND\s+SUPPLEMENTARY",
+        ],
+        "desc": "Consolidated Statements of Cash Flows",
+    },
+    "mda": {
+        "start": r"(?:Item\s+7|ITEM\s+7)[\.\s\-—]*Management.s\s+Discussion|Management.s\s+Discussion\s+and\s+Analysis",
+        "end": [
+            r"(?:Item\s+7A|ITEM\s+7A)",
+            r"(?:Item\s+8|ITEM\s+8)",
+            r"Quantitative\s+and\s+Qualitative\s+Disclosures",
+        ],
+        "desc": "Item 7 — Management's Discussion and Analysis",
+    },
+    "subsidiaries": {
+        "start": r"(?:Exhibit\s+21|EXHIBIT\s+21)|(?:Item\s+1|ITEM\s+1)[\.\s\-—]*(?!A).*?(?:Subsidiaries|Organization)",
+        "end": [
+            r"(?:Exhibit\s+2[2-9]|EXHIBIT\s+2[2-9])",
+            r"(?:Item\s+2|ITEM\s+2)",
+            r"Signatures",
+        ],
+        "desc": "Exhibit 21 — Subsidiaries / Item 1 Organization",
+    },
+    "risks": {
+        "start": r"(?:Item\s+1A|ITEM\s+1A)[\.\s\-—]*Risk\s+Factors|RISK\s+FACTORS|\nRisk\s+Factors\s*\n(?=[A-Z])",
+        "end": [
+            r"(?:Item\s+1B|ITEM\s+1B)",
+            r"(?:Item\s+2|ITEM\s+2)",
+            r"Unresolved\s+Staff\s+Comments",
+        ],
+        "desc": "Item 1A — Risk Factors",
+    },
+    "top10_holders": {
+        "start": r"Security\s+Ownership\s+of\s+Certain\s+Beneficial\s+Owners|SECURITY\s+OWNERSHIP|Principal\s+(?:Stockholders|Shareholders)|Beneficial\s+Ownership\s+of\s+(?:Shares|Common\s+Stock)|Common\s+Stock\s+Ownership|Ownership\s+of\s+Securities|Stock\s+Ownership\s+(?:by|of)",
+        "end": [
+            r"(?:Item\s+13|ITEM\s+13)",
+            r"Certain\s+Relationships",
+            r"Director\s+Compensation",
+            r"Delinquent\s+Section\s+16",
+            r"Equity\s+Compensation\s+Plan",
+        ],
+        "desc": "Security Ownership (from DEF 14A or 10-K Item 12)",
+    },
+}
+
+
+# ---- HTML tag stripper (stdlib only) ----
+
+class _HTMLTextExtractor(HTMLParser):
+    """Strip HTML tags, preserve text and basic structure."""
+
+    def __init__(self):
+        super().__init__()
+        self._chunks: list[str] = []
+        self._skip = False  # skip <style>/<script> content
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]):
+        tag_l = tag.lower()
+        if tag_l in ("style", "script"):
+            self._skip = True
+        # Insert line break for block-level elements
+        # Note: <br/> (self-closing) triggers handle_startendtag which
+        # delegates to handle_starttag by default, so br is handled correctly.
+        if tag_l in ("p", "div", "tr", "li", "br", "h1", "h2", "h3", "h4", "h5", "h6",
+                      "table", "thead", "tbody"):
+            self._chunks.append("\n")
+        # Insert tab for table cells to preserve column separation
+        if tag_l in ("td", "th"):
+            self._chunks.append("\t")
+        # Check for page-break CSS (SEC filings use this)
+        for attr_name, attr_val in attrs:
+            if attr_name == "style" and attr_val and "page-break" in attr_val:
+                self._chunks.append("\n__PAGE_BREAK__\n")
+
+    def handle_endtag(self, tag: str):
+        if tag.lower() in ("style", "script"):
+            self._skip = False
+
+    def handle_data(self, data: str):
+        if not self._skip:
+            self._chunks.append(data)
+
+    def get_text(self) -> str:
+        return "".join(self._chunks)
+
+
+def _strip_html(html_content: str) -> str:
+    """Remove HTML tags, return plain text."""
+    parser = _HTMLTextExtractor()
+    parser.feed(html_content)
+    return parser.get_text()
+
+
 # Minimum regex hit count to accept a pattern set (below → try other language)
 _MIN_HITS_THRESHOLD = 3
 
 
 class PDFReader:
-    """Read A-share / HK / US report PDFs with section-level extraction."""
+    """Read A-share / HK / US report PDFs and SEC HTM filings with section-level extraction."""
 
     def __init__(self, timeout: int = 60):
         self._timeout = timeout
 
+    # ---- format detection ----
+
+    @staticmethod
+    def _is_html(file_path: str | Path) -> bool:
+        """Check if a file is HTML/HTM rather than PDF."""
+        p = Path(file_path)
+        # Check extension first
+        if p.suffix.lower() in (".htm", ".html"):
+            return True
+        # Check magic bytes — HTML starts with '<' (possibly with BOM/whitespace)
+        try:
+            with open(p, "rb") as f:
+                head = f.read(256).lstrip()
+            return head[:1] == b"<" or head[:5].lower() == b"<!doc"
+        except OSError:
+            return False
+
     # ---- download ----
 
     def download(self, url: str, out_path: str | Path) -> Path:
-        """Download a PDF from a URL to local path. Returns the Path."""
+        """Download a filing from a URL to local path. Auto-detects PDF vs HTML from Content-Type.
+        If response is HTML but out_path ends in .pdf, switches extension to .htm.
+        Returns the actual Path written."""
         out_path = Path(out_path)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         if out_path.exists() and out_path.stat().st_size > 1024:
             return out_path  # assume cached
+        # Also check .htm variant when caller passed .pdf — avoids re-downloading
+        # after a previous run already detected HTML and saved as .htm
+        if out_path.suffix.lower() == ".pdf":
+            htm_variant = out_path.with_suffix(".htm")
+            if htm_variant.exists() and htm_variant.stat().st_size > 1024:
+                return htm_variant
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                          "AppleWebKit/537.36 (KHTML, like Gecko) "
                          "Chrome/120.0 Safari/537.36",
-            "Accept": "application/pdf,*/*",
+            "Accept": "application/pdf,text/html,*/*",
+            # Request identity encoding so SEC doesn't send gzip — avoids
+            # the stream=True pitfall where iter_content returns raw gzip bytes.
+            "Accept-Encoding": "identity",
         }
         resp = requests.get(url, headers=headers, timeout=self._timeout, stream=True)
         resp.raise_for_status()
+
+        # Detect if response is HTML when we expected PDF
+        ct = (resp.headers.get("Content-Type") or "").lower()
+        if ("text/html" in ct or "text/xml" in ct) and out_path.suffix.lower() == ".pdf":
+            out_path = out_path.with_suffix(".htm")
+            # Also check if .htm version already cached
+            if out_path.exists() and out_path.stat().st_size > 1024:
+                return out_path
+
         with open(out_path, "wb") as f:
             for chunk in resp.iter_content(8192):
                 f.write(chunk)
@@ -237,8 +417,21 @@ class PDFReader:
     # ---- extraction ----
 
     def extract_text(self, pdf_path: str | Path, pages: Iterable[int] | None = None) -> list[str]:
-        """Return list[str] where element i = page i+1 text. If pages given, only extract those."""
+        """Return list[str] where element i = page i+1 text.
+        Handles both PDF and HTML files transparently.
+        Note: for HTML files, `pages` filtering is applied to pseudo-pages."""
         pdf_path = Path(pdf_path)
+        if self._is_html(pdf_path):
+            all_pages = self._extract_text_html(pdf_path)
+            if pages is not None:
+                # Apply page filtering to pseudo-pages (same semantics as PDF)
+                idxs = list(pages)
+                return [all_pages[i] if i < len(all_pages) else "" for i in idxs]
+            return all_pages
+        return self._extract_text_pdf(pdf_path, pages)
+
+    def _extract_text_pdf(self, pdf_path: Path, pages: Iterable[int] | None = None) -> list[str]:
+        """PDF text extraction via pypdf."""
         reader = pypdf.PdfReader(str(pdf_path))
         n = len(reader.pages)
         idxs = list(pages) if pages is not None else list(range(n))
@@ -253,18 +446,51 @@ class PDFReader:
                 texts.append("")
         return texts
 
+    def _extract_text_html(self, htm_path: Path) -> list[str]:
+        """HTML/HTM text extraction using stdlib HTMLParser.
+
+        Splits into pseudo-pages by:
+        1. CSS page-break markers (SEC filings use these)
+        2. If no page-breaks found, split by ~4000 chars at paragraph boundaries
+        """
+        raw = htm_path.read_text(encoding="utf-8", errors="replace")
+        plain = _strip_html(raw)
+
+        # Split by page-break markers inserted by _HTMLTextExtractor
+        if "__PAGE_BREAK__" in plain:
+            pages = [p.strip() for p in plain.split("__PAGE_BREAK__") if p.strip()]
+        else:
+            # Fallback: split into ~4000-char chunks at double-newline boundaries
+            pages = []
+            current: list[str] = []
+            current_len = 0
+            for para in re.split(r"\n{2,}", plain):
+                para = para.strip()
+                if not para:
+                    continue
+                current.append(para)
+                current_len += len(para)
+                if current_len >= 4000:
+                    pages.append("\n\n".join(current))
+                    current = []
+                    current_len = 0
+            if current:
+                pages.append("\n\n".join(current))
+
+        return pages if pages else [""]
+
     def full_text(self, pdf_path: str | Path) -> str:
         """Return concatenated text with page markers."""
         pages = self.extract_text(pdf_path)
         return "\n".join(f"\n===== PAGE {i + 1} =====\n{t}" for i, t in enumerate(pages))
 
     def extract_sections(self, pdf_path: str | Path, *, lang: str | None = None) -> dict[str, dict]:
-        """Extract known sections from the PDF. Returns dict keyed by section id.
+        """Extract known sections from the PDF or HTM. Returns dict keyed by section id.
 
         Args:
-            pdf_path: Path to the PDF file.
-            lang: Force language ('cn' or 'en'). If None, auto-detect by trying
-                  both pattern sets and keeping whichever gets more hits.
+            pdf_path: Path to the PDF or HTM file.
+            lang: Force language ('cn', 'en', or 'sec'). If None, auto-detect by trying
+                  pattern sets and keeping whichever gets more hits.
 
         Each value:
             {
@@ -277,13 +503,29 @@ class PDFReader:
         """
         pages = self.extract_text(pdf_path)
         full = "\n".join(f"__PAGE_{i + 1}__\n{t}" for i, t in enumerate(pages))
+        is_html = self._is_html(pdf_path)
 
         if lang == "cn":
             return self._extract_with_patterns(full, SECTION_PATTERNS)
         if lang == "en":
             return self._extract_with_patterns(full, SECTION_PATTERNS_EN)
+        if lang == "sec":
+            return self._extract_with_patterns(full, SECTION_PATTERNS_SEC)
 
-        # Auto-detect: try CN first, fall back to EN if too few hits
+        # Auto-detect: for HTML files, try SEC patterns first
+        if is_html:
+            sec_out = self._extract_with_patterns(full, SECTION_PATTERNS_SEC)
+            sec_hits = sum(1 for s in sec_out.values() if s["found"])
+            if sec_hits >= _MIN_HITS_THRESHOLD:
+                return sec_out
+            # Fall through to EN patterns for non-SEC HTML (e.g. HK annual reports)
+            en_out = self._extract_with_patterns(full, SECTION_PATTERNS_EN)
+            en_hits = sum(1 for s in en_out.values() if s["found"])
+            if en_hits > sec_hits:
+                return en_out
+            return sec_out  # default to SEC for HTML
+
+        # PDF: try CN first, fall back to EN if too few hits
         cn_out = self._extract_with_patterns(full, SECTION_PATTERNS)
         cn_hits = sum(1 for s in cn_out.values() if s["found"])
         if cn_hits >= _MIN_HITS_THRESHOLD:
@@ -302,28 +544,49 @@ class PDFReader:
 
         for sec_id, conf in patterns.items():
             start_re = re.compile(conf["start"])
-            m_start = start_re.search(full)
-            if not m_start:
+            best_snippet = None
+            best_start_pos = None
+            best_end_pos = None
+
+            # Find all matches and pick the one with the longest extracted text.
+            # This avoids the TOC false-match problem: SEC 10-K Table of Contents
+            # contains lines like "Item 7. Management's Discussion...50" which match
+            # the start regex but yield only ~50 chars before the end boundary fires.
+            search_start = 0
+            while True:
+                m_start = start_re.search(full, pos=search_start)
+                if not m_start:
+                    break
+
+                start_pos = m_start.start()
+                # find end (first of candidates after start)
+                end_positions = []
+                for end_pat in conf["end"]:
+                    m_end = re.compile(end_pat).search(full, pos=m_start.end())
+                    if m_end:
+                        end_positions.append(m_end.start())
+                end_pos = min(end_positions) if end_positions else min(start_pos + 8000, len(full))
+
+                snippet = full[start_pos:end_pos]
+
+                if best_snippet is None or len(snippet) > len(best_snippet):
+                    best_snippet = snippet
+                    best_start_pos = start_pos
+                    best_end_pos = end_pos
+
+                # Move past this match to look for next occurrence
+                search_start = m_start.end()
+
+            if best_snippet is None:
                 out[sec_id] = {"desc": conf["desc"], "found": False, "start_page": None, "end_page": None, "text": ""}
                 continue
 
-            start_pos = m_start.start()
-            # find end (first of candidates after start)
-            end_positions = []
-            for end_pat in conf["end"]:
-                m_end = re.compile(end_pat).search(full, pos=m_start.end())
-                if m_end:
-                    end_positions.append(m_end.start())
-            end_pos = min(end_positions) if end_positions else min(start_pos + 8000, len(full))
-
-            snippet = full[start_pos:end_pos]
-
             # figure out start/end page from __PAGE_N__ markers
-            start_page = self._find_page(full, start_pos)
-            end_page = self._find_page(full, max(end_pos - 1, start_pos))
+            start_page = self._find_page(full, best_start_pos)
+            end_page = self._find_page(full, max(best_end_pos - 1, best_start_pos))
 
             # strip __PAGE_N__ markers from snippet but keep annotations
-            snippet_clean = re.sub(r"__PAGE_(\d+)__", lambda m: f"\n[P.{m.group(1)}] ", snippet).strip()
+            snippet_clean = re.sub(r"__PAGE_(\d+)__", lambda m: f"\n[P.{m.group(1)}] ", best_snippet).strip()
 
             out[sec_id] = {
                 "desc": conf["desc"],
@@ -364,7 +627,8 @@ class PDFReader:
 
     @staticmethod
     def merge_sections(regex_path: str | Path, llm_path: str | Path, out_path: str | Path) -> dict:
-        """Merge regex-extracted and LLM-extracted sections. Regex wins when found=True."""
+        """Merge two section JSONs. Prefers the source with longer text when both found.
+        Labels use 'regex'/'llm' for backward compatibility with downstream consumers."""
         regex_path, llm_path, out_path = Path(regex_path), Path(llm_path), Path(out_path)
         regex_data = json.loads(regex_path.read_text()) if regex_path.exists() else {}
         llm_data = json.loads(llm_path.read_text()) if llm_path.exists() else {}
@@ -375,10 +639,23 @@ class PDFReader:
         for key in all_keys:
             r = regex_data.get(key, {})
             l = llm_data.get(key, {})
-            if r.get("found"):
+            r_found = r.get("found", False)
+            l_found = l.get("found", False)
+
+            if r_found and l_found:
+                # Both found — pick the one with longer text
+                r_len = len(r.get("text", ""))
+                l_len = len(l.get("text", ""))
+                if r_len >= l_len:
+                    merged[key] = {**r, "method": "regex"}
+                    regex_count += 1
+                else:
+                    merged[key] = {**l, "method": "llm"}
+                    llm_count += 1
+            elif r_found:
                 merged[key] = {**r, "method": "regex"}
                 regex_count += 1
-            elif l.get("found"):
+            elif l_found:
                 merged[key] = {**l, "method": "llm"}
                 llm_count += 1
             else:
@@ -416,8 +693,8 @@ def main():
     ap.add_argument("--section", default=None,
                     help=f"Extract a single section. Choices: {','.join(SECTION_PATTERNS)}"
                     )
-    ap.add_argument("--lang", default=None, choices=["cn", "en"],
-                    help="Force language for section patterns (default: auto-detect)")
+    ap.add_argument("--lang", default=None, choices=["cn", "en", "sec"],
+                    help="Force language for section patterns (default: auto-detect; sec=SEC 10-K HTM)")
     ap.add_argument("--search", default=None, help="Regex to search in full text")
     ap.add_argument("--all-sections", "--regex-sections", action="store_true",
                     dest="all_sections", help="Extract all known sections via regex")

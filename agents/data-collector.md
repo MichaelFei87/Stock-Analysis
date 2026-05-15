@@ -356,25 +356,53 @@ python3 -m scripts.data_snapshot --bundle output/{company}/raw_data --out output
 
 #### 定位 财报 URL
 
+**优先 HTM 格式**：SEC EDGAR 的 10-K 主文档多为 HTM/iXBRL，`pdf_reader` 已支持自动检测并解析 HTM。
+
 ```bash
 python3 -m scripts.tavily_search "{company} {ticker} 10-K annual report SEC EDGAR {latest_annual_fy}" --domains sec.gov
 ```
 
-或直接访问: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10-K&dateb=&owner=include&count=40`
+或直接访问 EDGAR full-text search:
+- `https://efts.sec.gov/LATEST/search-index?q={company}&forms=10-K&dateRange=custom&startdt={FY-start}&enddt={today}`
+- `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={ticker}&type=10-K&dateb=&owner=include&count=40`
 
-取最新 10-K 和 10-Q 的 PDF 或 HTM 链接。无结果则 WebSearch 同 query。
+进入 filing index 页后，优先取 **primary document 的 .htm 链接**（而非 PDF），因为 HTM 保留了 DOM 结构和 iXBRL 标签，section 解析命中率更高。无结果则 WebSearch 同 query。
 
 #### 下载 + regex 提取 + LLM fallback + 合并
 
-流程同 A 股路径（pdf_reader → regex → 命中率检查 → LLM fallback → merge）。
+流程同 A 股路径。`pdf_reader` 自动检测文件格式（PDF/HTM），HTM 文件使用 `SECTION_PATTERNS_SEC`（Item 7/8/1A 等 SEC heading 正则）：
 
-#### PDF 采集清单
+```bash
+# HTM 和 PDF 用同一命令，自动分流
+python3 -m scripts.pdf_reader {URL或路径} --all-sections --out output/{company}/raw_data/pdf_sections_{name}_regex.json
+```
 
-| 文件 | 来源 | 必需? |
-|------|------|:---:|
-| 最新 10-K (Annual Report) | SEC EDGAR | ✅ |
-| 最新 10-Q (Quarterly Report) | SEC EDGAR | ✅ |
-| 最近 8-K（如有重大事项） | SEC EDGAR | ⭕ |
+对于 HTM 文件，也可强制指定 `--lang sec` 使用 SEC 专用正则。
+
+#### 采集清单
+
+| 文件 | 来源 | 必需? | 说明 |
+|------|------|:---:|------|
+| 最新 10-K (Annual Report) | SEC EDGAR | ✅ | 主文档优先 HTM 格式 |
+| 最新 10-Q (Quarterly Report) | SEC EDGAR | ✅ | 主文档优先 HTM 格式 |
+| DEF 14A (Proxy Statement) | SEC EDGAR | ✅ | top10_holders、高管薪酬 |
+| 13F (Institutional Holdings) | SEC EDGAR | ⭕ | 机构持仓明细 |
+| 13D / 13G (Activist/Block) | SEC EDGAR | ⭕ | 大股东变动 |
+| 最近 8-K（如有重大事项） | SEC EDGAR | ⭕ | 重大事件披露 |
+
+**注意 — 美股多文件采集策略**（A 股年报"一个 PDF 包含所有"，美股 10-K 不是）：
+
+| Section | 主要来源文件 | 备注 |
+|---------|-----------|------|
+| `main_financial_data` | 10-K 主文档 (Item 8) | |
+| `non_recurring_items` | 10-K 主文档 (MD&A 内) | 搜 "Non-GAAP" / "Free Cash Flow" / "Adjusted"；Apple 等无 non-GAAP 指标的公司此 section 为空 |
+| `balance/income/cashflow_changes` | 10-K 主文档 (Item 8 + Item 7) | |
+| `mda` | 10-K 主文档 (Item 7) | |
+| `risks` | 10-K 主文档 (Item 1A) | |
+| `subsidiaries` | **10-K Exhibit 21 (独立 HTM)** | 进入 filing index 页找 EX-21 链接，单独下载后 `pdf_reader --all-sections` |
+| `top10_holders` | **DEF 14A proxy statement** | "Security Ownership of Certain Beneficial Owners"；另可参考 13F/13D |
+
+执行顺序：先下载 10-K 主文档 → 再从 filing index 页下载 Exhibit 21 → 再搜 DEF 14A filing → 分别对每个 HTM 跑 `pdf_reader --all-sections`，最后 merge 时将各文件的命中 section 合并到一个 `pdf_sections_merged.json`。
 
 ### Step 4U: 搜索 4 轮
 
