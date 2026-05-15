@@ -1,4 +1,13 @@
-# 联网搜索策略（v3 - 辅助定位）
+# 联网搜索策略（v4 - Tavily 优先）
+
+> **v4 更新**：引入 Tavily Search API 作为优先搜索源，Claude Code 内置 WebSearch 降为 fallback。
+> Tavily 在中文金融垂直站点（巨潮、雪球、东财）的命中率显著优于内置 WebSearch。
+>
+> **搜索优先级**: `Tavily API > WebSearch (fallback)`
+> **数据优先级**: `Tushare > yfinance > PDF > Tavily/WebSearch`
+>
+> **Tavily 调用方式**: `python3 -m scripts.tavily_search "{query}" --domains {domain}`
+> 无 API key 时自动跳过,fallback 到 WebSearch。
 
 > **v3 重大调整**：本文件从 v1/v2 的"主数据源"降级为**辅助定位**工具。
 > 主数据源是 `scripts/tushare_collector.py` 和 `scripts/pdf_reader.py`，见 `phases/phase1-data-collection.md`。

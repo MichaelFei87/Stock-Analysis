@@ -39,14 +39,29 @@ Register at [tushare.pro](https://tushare.pro/register) and export your token:
 echo 'export TUSHARE_TOKEN="your_token_here"' >> ~/.zshrc && source ~/.zshrc
 ```
 
-### 4. Verify setup
+### 4. Tavily Search API key (strongly recommended)
+
+The built-in WebSearch tool has poor coverage for Chinese financial sites and HK/US regulatory filings. **Tavily provides dramatically better search results** — in testing, it found Tencent's annual report PDF on HKEX and Tesla's 10-K on SEC.gov where WebSearch returned nothing.
+
+- **Free tier**: 1,000 searches/month (enough for 100+ company analyses)
+- **If you analyze HK or US stocks, this is essentially required**
+
+Sign up at [tavily.com](https://tavily.com) and export your key:
+
+```bash
+echo 'export TAVILY_API_KEY="tvly-your_key_here"' >> ~/.zshrc && source ~/.zshrc
+```
+
+Without Tavily, the system falls back to WebSearch automatically — but expect significantly lower search hit rates for non-A-share markets.
+
+### 5. Verify setup
 
 ```bash
 cd ~/.claude/skills/stock-analyze
 python3 -m scripts.check_env
 ```
 
-### 5. Run
+### 6. Run
 
 ```
 /stock-analyze 贵州茅台 600519.SH

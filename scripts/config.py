@@ -7,6 +7,9 @@ from pathlib import Path
 # ---------- Tushare ----------
 TUSHARE_TOKEN: str | None = os.environ.get("TUSHARE_TOKEN")
 
+# ---------- Tavily Search API ----------
+TAVILY_API_KEY: str | None = os.environ.get("TAVILY_API_KEY")
+
 # Token 不在环境里不立即抛错 —— us_collector / pdf_reader / derived_metrics 不需要 token
 # 调用 A 股/港股 collector 时才显式检查（见 tushare_collector.require_token()）
 

@@ -43,6 +43,16 @@ def check() -> int:
         print("  → A 股 / 港股 collector 将无法工作（美股 yfinance 不受影响）")
         ok = False
 
+    # Tavily (optional)
+    print("\nTavily Search API:")
+    if config.TAVILY_API_KEY:
+        masked = config.TAVILY_API_KEY[:4] + "…" + config.TAVILY_API_KEY[-4:]
+        print(f"  [OK] TAVILY_API_KEY set (masked={masked})")
+    else:
+        print("  [OPTIONAL] TAVILY_API_KEY not set — WebSearch will be used as fallback")
+        print("  → Add to ~/.zshrc:  export TAVILY_API_KEY='tvly-your_key_here'")
+        print("  → Free tier: 1000 searches/month at https://tavily.com")
+
     # Cache dir
     print(f"\nCache: {config.CACHE_DIR}  (TTL={config.CACHE_TTL_DAYS} days)")
     print(f"Output: {config.OUTPUT_ROOT}")
