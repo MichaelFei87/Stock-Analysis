@@ -38,7 +38,7 @@ Phase 2 文档精析       （精读 PDF 9 段落，提取原文引用）
    ↓
 Phase 3 综合分析与报告 （13 章节主报告 + Step 1.5 自动跑 11 框架 audit）
    ↓
-Phase 6 审核发布       （18 项审核 + Part D 补查闭环 + HTML + GitHub Pages）
+Phase 6 审核发布       （多项审核 + 补查闭环 + HTML + GitHub Pages）
 
     [可选，手动触发] ↓
 Phase 7 量化监控       （/stock-analyze <公司> --monitor）
@@ -56,7 +56,7 @@ Phase 7 量化监控       （/stock-analyze <公司> --monitor）
 curl -fsSL https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main/install.sh | bash
 ```
 
-这会克隆到 `~/.claude/skills/stock-analyze/` 并创建 `~/投资报告/` 输出目录。
+这会下载到 `~/.claude/skills/stock-analyze/` 并创建 `~/投资报告/` 输出目录。
 
 ### 2. 安装 Python 依赖
 
@@ -116,7 +116,7 @@ python3 -m scripts.check_env
 ```
 Stock-Analysis/
 ├── README.md                   # 本文件
-├── CHANGELOG.md                # v1 → v5.1.4 演进
+├── CHANGELOG.md                # 版本演进记录
 ├── LICENSE                     # MIT
 ├── .env.sample                 # 环境变量模板
 ├── SKILL.md                    # ⭐ 协调器（6+1 阶段定义）
@@ -129,9 +129,9 @@ Stock-Analysis/
 │   ├── phase6-review-publish.md
 │   └── phase7-quantitative-monitor.md
 │
-├── references/                 # 7 个参考文档
+├── references/                 # 参考文档
 │   ├── scoring-rubric.md           # 10 维度事实评分
-│   ├── qualitative-frameworks.md   # 3 定性框架（v4.1）
+│   ├── qualitative-frameworks.md   # 3 定性框架
 │   ├── valuation-frameworks.md     # Damodaran 估值
 │   ├── search-strategy.md          # WebSearch 辅助规范
 │   ├── html-template-guide.md      # HTML 可视化规范
@@ -157,7 +157,8 @@ Stock-Analysis/
 │       ├── report-checklist.json   # 审核清单
 │       └── insight-card-schema.json
 │
-└── scripts/                    # ⭐ Python 数据层（23 模块 + 5 测试）
+└── scripts/                    # ⭐ Python 数据层（23 模块）
+    ├── __init__.py              # 包初始化
     ├── config.py               # Token / 缓存 / 速率
     ├── check_env.py            # 环境自检
     ├── data_cache.py           # 7 天 TTL Parquet 缓存
@@ -205,7 +206,7 @@ Stock-Analysis/
 ├── technical_analysis.md       # 技术面分析
 ├── phase3-part{1-5}.md         # 5 part 分段写作
 ├── {公司}-analysis-{date}.md   # ⭐ 主报告（13 章节）
-├── {公司}-analysis-{date}.html # ⭐ HTML 可视化
+├── {date}.html                 # ⭐ HTML 可视化 Dashboard
 ├── reviewer_responses/         # reviewer 修正档案
 ├── phase6-review-log.md        # 审核日志
 ├── main-log.md                 # 调度日志
