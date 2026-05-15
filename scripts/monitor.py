@@ -118,7 +118,7 @@ def _fetch_fresh_metrics(ticker: str, market: str) -> dict[str, Any]:
         from .derived_metrics import compute_a_share
         c = TushareCollector()
         ts_code = normalize_a_code(ticker)
-        bundle = c.collect_all(ts_code, start_year=2022)
+        bundle = c.collect_all(ts_code)  # uses dynamic default (3 years)
         metrics = compute_a_share(bundle)
         fresh["bundle"] = bundle
         fresh["metrics"] = metrics

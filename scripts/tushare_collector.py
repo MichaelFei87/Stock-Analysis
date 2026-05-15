@@ -242,13 +242,19 @@ class TushareCollector:
         "ebit,ebitda"
     )
 
-    def income(self, ts_code: str, start_year: int = 2020, report_type: int = 1,
+    @staticmethod
+    def _default_start_year(start_year: int) -> int:
+        """Resolve start_year=0 sentinel to 3 years ago."""
+        return start_year if start_year > 0 else dt.date.today().year - 3
+
+    def income(self, ts_code: str, start_year: int = 0, report_type: int = 1,
                fields: str = "core") -> pd.DataFrame:
         """利润表（合并报表）。
 
         fields='core' (默认，~32 列) 或 'full' (全量 85 列)。
         report_type: 1=合并, 2=单季, 4=单季调整
         """
+        start_year = self._default_start_year(start_year)
         key = f"tushare_income_{ts_code}_rt{report_type}_from{start_year}_{fields}"
         cached = data_cache.get(key)
         if cached is not None:
@@ -301,9 +307,10 @@ class TushareCollector:
         "oth_receiv,contract_assets"
     )
 
-    def balancesheet(self, ts_code: str, start_year: int = 2020, report_type: int = 1,
+    def balancesheet(self, ts_code: str, start_year: int = 0, report_type: int = 1,
                      fields: str = "core") -> pd.DataFrame:
         """资产负债表。fields='core' (默认 ~42 列) 或 'full' (全量 152 列)."""
+        start_year = self._default_start_year(start_year)
         key = f"tushare_balance_{ts_code}_rt{report_type}_from{start_year}_{fields}"
         cached = data_cache.get(key)
         if cached is not None:
@@ -342,9 +349,10 @@ class TushareCollector:
         "credit_impa_loss"
     )
 
-    def cashflow(self, ts_code: str, start_year: int = 2020, report_type: int = 1,
+    def cashflow(self, ts_code: str, start_year: int = 0, report_type: int = 1,
                  fields: str = "core") -> pd.DataFrame:
         """现金流量表。fields='core' (默认 ~33 列) 或 'full' (全量 97 列)."""
+        start_year = self._default_start_year(start_year)
         key = f"tushare_cashflow_{ts_code}_rt{report_type}_from{start_year}_{fields}"
         cached = data_cache.get(key)
         if cached is not None:
@@ -393,12 +401,13 @@ class TushareCollector:
         "q_impair_to_gr_ttm,q_gc_to_gr,q_op_to_gr,q_roe,q_dt_roe,q_npta"
     )
 
-    def fina_indicator(self, ts_code: str, start_year: int = 2020,
+    def fina_indicator(self, ts_code: str, start_year: int = 0,
                        fields: str = "core") -> pd.DataFrame:
         """财务指标（ROE/ROA/毛利率等）。fields='core' (默认 ~110 列) 或 'full' (全量 108 列，差异在 ttm 指标).
 
         注：fina_indicator 本身字段已经比较精简，core 与 full 差异不大，但保留接口形式一致。
         """
+        start_year = self._default_start_year(start_year)
         key = f"tushare_fina_indicator_{ts_code}_from{start_year}_{fields}"
         cached = data_cache.get(key)
         if cached is not None:
@@ -421,8 +430,9 @@ class TushareCollector:
 
     # ---- 股权 / 治理 ----
 
-    def top10_holders(self, ts_code: str, start_year: int = 2023) -> pd.DataFrame:
+    def top10_holders(self, ts_code: str, start_year: int = 0) -> pd.DataFrame:
         """前十大股东。"""
+        start_year = self._default_start_year(start_year)
         key = f"tushare_top10_holders_{ts_code}_from{start_year}"
         cached = data_cache.get(key)
         if cached is not None:
@@ -437,8 +447,9 @@ class TushareCollector:
         data_cache.put(key, df, extra={"api": "top10_holders"})
         return df
 
-    def top10_floatholders(self, ts_code: str, start_year: int = 2023) -> pd.DataFrame:
+    def top10_floatholders(self, ts_code: str, start_year: int = 0) -> pd.DataFrame:
         """前十大流通股东。"""
+        start_year = self._default_start_year(start_year)
         key = f"tushare_top10_float_{ts_code}_from{start_year}"
         cached = data_cache.get(key)
         if cached is not None:
@@ -486,8 +497,9 @@ class TushareCollector:
         data_cache.put(key, df, extra={"api": "stk_rewards"})
         return df
 
-    def stk_holdernumber(self, ts_code: str, start_year: int = 2023) -> pd.DataFrame:
+    def stk_holdernumber(self, ts_code: str, start_year: int = 0) -> pd.DataFrame:
         """股东户数变化（反映散户/机构流向）。"""
+        start_year = self._default_start_year(start_year)
         key = f"tushare_holdernumber_{ts_code}_from{start_year}"
         cached = data_cache.get(key)
         if cached is not None:
@@ -607,8 +619,9 @@ class TushareCollector:
 
     # ---- 分业务 / 行业 ----
 
-    def fina_mainbz(self, ts_code: str, start_year: int = 2023) -> pd.DataFrame:
+    def fina_mainbz(self, ts_code: str, start_year: int = 0) -> pd.DataFrame:
         """主营业务构成（分行业/产品/地区）。若披露过则有数据。"""
+        start_year = self._default_start_year(start_year)
         key = f"tushare_mainbz_{ts_code}_from{start_year}"
         cached = data_cache.get(key)
         if cached is not None:
@@ -726,12 +739,13 @@ class TushareCollector:
 
     # ---- 一键采集 ----
 
-    def collect_all(self, ts_code: str, start_year: int = 2022) -> dict[str, pd.DataFrame]:
+    def collect_all(self, ts_code: str, start_year: int = 0) -> dict[str, pd.DataFrame]:
         """Collect the full financial + governance bundle for a company.
 
         Returns a dict keyed by data domain. Each value is a pandas DataFrame
         (possibly empty if the API has no data or failed).
         """
+        start_year = self._default_start_year(start_year)
         bundle: dict[str, pd.DataFrame] = {}
         bundle["stock_basic"] = self.stock_basic(ts_code)
         bundle["income"] = self.income(ts_code, start_year=start_year)
@@ -867,7 +881,7 @@ def main():
     ap = argparse.ArgumentParser(description="Collect Tushare financial bundle for an A-share.")
     ap.add_argument("code", help="Stock code (e.g. 002862 or 002862.SZ)")
     ap.add_argument("--out", default=None, help="Output dir (default: output/{code}/raw_data/)")
-    ap.add_argument("--start-year", type=int, default=2022, help="Earliest year of financials to fetch")
+    ap.add_argument("--start-year", type=int, default=0, help="Earliest year of financials to fetch (default: 3 years ago)")
     ap.add_argument("--name", default=None, help="Chinese/common name for output dir (default from stock_basic)")
     args = ap.parse_args()
 
