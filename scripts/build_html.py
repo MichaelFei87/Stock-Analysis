@@ -180,8 +180,15 @@ def build_html(
     ticker: str = "",
     report_date: str = "",
     version: str = "v4.6",
+    metrics_path: Path | None = None,
 ) -> str:
     md_text = md_path.read_text(encoding="utf-8")
+
+    # 0. 加载 metrics.json（确定性结构化数据源）
+    metrics: dict = {}
+    if metrics_path and metrics_path.exists():
+        import json as _json
+        metrics = _json.loads(metrics_path.read_text(encoding="utf-8"))
 
     # 1. 解析注释块
     rating_block = _parse_structured_block(md_text, "RATING_TRIO_DATA")
@@ -208,17 +215,27 @@ def build_html(
         fm = re.search(r"(\d{4}-\d{2}-\d{2})", md_path.stem)
         if fm:
             report_date = fm.group(1)
+        else:
+            fm = re.search(r"(\d{8})", md_path.stem)
+            if fm:
+                d = fm.group(1)
+                report_date = f"{d[:4]}-{d[4:6]}-{d[6:]}"
 
-    # 抽 hero meta(从 pre_h2 中找)
-    def _grep_meta(pattern: str, default: str = "–") -> str:
-        m = re.search(pattern, pre_h2_clean)
-        return m.group(1).strip() if m else default
+    # 抽 hero meta — 优先从 metrics.json（确定性），fallback 到注释块 dict
+    _val = metrics.get("valuation", {})
+    _prof = metrics.get("profitability", {})
 
-    latest_close = _grep_meta(r"\*\*最新收盘\*\*:\s*([\d.]+)")
-    market_cap = _grep_meta(r"\*\*总市值\*\*:\s*([\d.]+)")
-    pb = _grep_meta(r"PB\s+([\d.]+)")
+    latest_close = str(_val.get("latest_close", "")) or str(metric_block.get("latest_close", "–"))
+    market_cap_raw = _val.get("market_cap_wanyuan")
+    if market_cap_raw is not None:
+        market_cap = f"{market_cap_raw / 10000:.2f}"  # 万元 → 亿
+    else:
+        market_cap = str(metric_block.get("market_cap", "–"))
+    pb = str(round(_val.get("pb", 0), 2) if _val.get("pb") else "") or str(metric_block.get("pb", "–"))
+    pe_ttm = str(round(_val.get("pe_ttm", 0), 2) if _val.get("pe_ttm") else "") or str(metric_block.get("pe_ttm", "–"))
+
+    # anchor_price 来自 Phase 3 估值结论，在 rating_block 注释块中
     anchor_price = rating_block.get("anchor_price") or "–"
-    price_tail = _grep_meta(r"最差情景.*?([\d.]+)\s*元")
 
     # 4. 每个 section MD → HTML
     # v4.7 fix #1: 加 nl2br 防止表格内换行被压平
@@ -297,7 +314,6 @@ def build_html(
         "{{market_cap}}": market_cap,
         "{{pb}}": pb,
         "{{anchor_price}}": anchor_price,
-        "{{price_tail}}": price_tail,
         "{{skill_version}}": version,
     }
     for k, v in replacements.items():
@@ -315,6 +331,7 @@ def main():
     ap.add_argument("--out", help="输出 HTML 路径 (默认同目录同名 .html)")
     ap.add_argument("--ticker", default="", help="ticker(默认从 MD title 抽)")
     ap.add_argument("--version", default="v4.7", help="skill 版本号")
+    ap.add_argument("--metrics", default="", help="metrics.json 路径 (确定性数据源, 优先于 MD regex)")
     ap.add_argument("--skip-lint", action="store_true", help="跳过 anti_lazy_lint(不推荐, 仅 debug 用)")
     args = ap.parse_args()
 
@@ -358,7 +375,8 @@ def main():
             print("⚠️  anti_lazy_lint 模块未找到, 跳过深度检查")
 
     try:
-        html = build_html(md_path, company=args.company, ticker=args.ticker, version=args.version)
+        html = build_html(md_path, company=args.company, ticker=args.ticker, version=args.version,
+                          metrics_path=Path(args.metrics) if args.metrics else None)
     except Exception as e:
         print(f"❌ 构建失败: {e}", file=sys.stderr)
         import traceback; traceback.print_exc()
