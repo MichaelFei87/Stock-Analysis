@@ -10,7 +10,7 @@
 
 - Collects financial data via Tushare Pro (A/HK) and yfinance (US)
 - Downloads and parses annual report PDFs for primary-source evidence
-- Runs 11 auditing frameworks (Piotroski, Beneish, Altman, DuPont, etc.) to surface red flags
+- Runs 12 auditing frameworks (Piotroski, Beneish, Altman, DuPont, Q4 wash, etc.) to surface red flags
 - Generates a 13-section investment report with HTML visualization
 - Optional `--monitor` mode to track changes against a prior baseline
 

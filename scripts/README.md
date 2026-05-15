@@ -15,7 +15,7 @@ LLM（Phase 1-5）只负责**分析**，不再自己去搜索和拼凑数据。
 ### 1. 安装依赖
 
 ```bash
-pip3 install --user tushare yfinance pypdf pandas pyarrow requests
+pip3 install --user tushare yfinance pypdf pandas pyarrow requests numpy
 ```
 
 ### 2. 设置 Tushare Token（必需，如果要分析 A 股/港股）
@@ -31,6 +31,17 @@ source ~/.zshrc
 ```
 
 **⚠️ Token 是私人凭证，绝不要提交到 git 仓库**（requirements.txt 里不写、任何 *.md 里也不写）。
+
+### 2b. 设置 Tavily API Key（强烈推荐，港股/美股年报搜索用）
+
+注册：<https://tavily.com>（免费 1000 次/月）。
+
+```bash
+echo 'export TAVILY_API_KEY="tvly-your_key_here"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+未设置时自动 fallback 到 WebSearch，但港股/美股年报 PDF 命中率显著降低。
 
 ### 3. 验证环境
 
@@ -55,6 +66,7 @@ python3 -m scripts.check_env
 | `hk_collector` | 港股混合（Tushare + yfinance） | `HKCollector().collect_all("0700.HK")` |
 | `pdf_reader` | 财报 PDF 原文解析 | `PDFReader().extract_sections(pdf_path)` |
 | `derived_metrics` | 衍生指标计算 | `compute_a_share(bundle)` / `compute_us(bundle)` |
+| `tavily_search` | Tavily Search API 封装 | `tavily_search(query, domains)` |
 
 ---
 

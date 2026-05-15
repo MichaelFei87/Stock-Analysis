@@ -21,7 +21,7 @@ model: inherit
 
 1. `{output_dir}/phase3-part2.md` ★ — part2 已写的财务数据,§六 评分必须基于这些数字
 2. `{output_dir}/data_snapshot.md` §3 多年趋势 — 评分锚点
-3. `{output_dir}/audit_report.md` — 11 框架红旗,§六 维度 7/8 必须引用
+3. `{output_dir}/audit_report.md` — 12 框架红旗,§六 维度 7/8 必须引用
 4. `{output_dir}/peer_analysis.md` — §八 全部基础
 5. `{output_dir}/capital_flow.md` — §六 维度 6 主力流向
 6. `{output_dir}/technical_analysis.md` — 部分 §六 维度引用

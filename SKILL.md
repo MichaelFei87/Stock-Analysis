@@ -225,7 +225,7 @@ Phase 1 (data-collector) → Phase 2 (主 agent) → Phase 3 (5 sub-agent 串行
 |---|---|
 | `scripts/check_env.py` | 环境检查 |
 | `scripts/data_snapshot.py` ★ | 9 节确定性数据 |
-| `scripts/financial_audit.py` | 11 框架红旗 |
+| `scripts/financial_audit.py` | 12 框架红旗 |
 | `scripts/assemble_report.py` ★ | Phase 3 5 part 拼接 |
 | `scripts/anti_lazy_lint.py` ★ | Phase 6 Part A 4 项机械规则 |
 | `scripts/review_loop.py` ★ v5.1.3 | Phase 6 Part A.5 reviewer FIX 合并 + 对抗检测 |

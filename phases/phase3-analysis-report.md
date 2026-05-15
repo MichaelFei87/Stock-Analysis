@@ -164,7 +164,7 @@ python3 -m scripts.assemble_report \
 
 ### Step 1.5: 财务异常自动审计（v4 新增）
 
-**在做任何定性分析之前**，先跑一次自动化财务审计，11 个大师框架扫一遍 Phase 1 的结构化数据：
+**在做任何定性分析之前**，先跑一次自动化财务审计，12 个大师框架扫一遍 Phase 1 的结构化数据：
 
 ```bash
 python3 -m scripts.financial_audit output/{company}/raw_data/ \
@@ -172,7 +172,7 @@ python3 -m scripts.financial_audit output/{company}/raw_data/ \
     --json output/{company}/audit_report.json
 ```
 
-11 个框架:
+12 个框架:
 1. **Piotroski F-Score** (0-9 分财务健康)
 2. **Beneish M-Score** (盈余操纵检测, M > -1.78 警示)
 3. **Altman Z-Score** (破产预警)
@@ -184,6 +184,7 @@ python3 -m scripts.financial_audit output/{company}/raw_data/ \
 9. **Forward Guidance** (forecast_vip 首亏/预减 / 预告区间宽度)
 10. **Valuation Anomaly** (PB 历史分位 + PB vs ROE 错配 + 股息率)
 11. **Related-Party Exposure** (长期股权投资波动 + 投资收益/公允价值变动大额负值)
+12. **Q4 Profit Distribution** (Q4 单季利润占比异常低 → "Q4 洗澡"检测)
 
 **输出**:
 - `audit_report.md` — markdown 格式，按严重度排序
