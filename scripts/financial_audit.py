@@ -1051,8 +1051,6 @@ def _q4_profit_wash(bundle: dict) -> list[RedFlag]:
     df["_year"] = df["_ed"].str[:4].astype(int)
     df["_mmdd"] = df["_ed"].str[4:]
 
-    f = lambda row, col: _safe_float(row.get(col)) or 0.0
-
     # Group by year, look for 1231 (annual) and 0930 (Q3 cumulative)
     for year in sorted(df["_year"].unique()):
         yr = df[df["_year"] == year]
@@ -1063,7 +1061,7 @@ def _q4_profit_wash(bundle: dict) -> list[RedFlag]:
 
         annual_np = _safe_float(annual_row.iloc[0].get("n_income_attr_p"))
         q3_np = _safe_float(q3_row.iloc[0].get("n_income_attr_p"))
-        if annual_np is None or q3_np is None or annual_np == 0:
+        if annual_np is None or q3_np is None or annual_np <= 0:
             continue
 
         q4_np = annual_np - q3_np
