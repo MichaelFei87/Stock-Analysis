@@ -198,7 +198,6 @@ def build_html(
     company: str,
     ticker: str = "",
     report_date: str = "",
-    version: str = "v4.6",
     metrics_path: Path | None = None,
 ) -> str:
     md_text = md_path.read_text(encoding="utf-8")
@@ -381,7 +380,6 @@ def main():
     ap.add_argument("--md", help="MD 路径 (默认自动找最新)")
     ap.add_argument("--out", help="输出 HTML 路径 (默认同目录同名 .html)")
     ap.add_argument("--ticker", default="", help="ticker(默认从 MD title 抽)")
-    ap.add_argument("--version", default="v4.7", help="skill 版本号")
     ap.add_argument("--metrics", default="", help="metrics.json 路径 (确定性数据源, 优先于 MD regex)")
     ap.add_argument("--skip-lint", action="store_true", help="跳过 anti_lazy_lint(不推荐, 仅 debug 用)")
     args = ap.parse_args()
@@ -432,7 +430,7 @@ def main():
             auto_metrics = md_path.parent / "metrics.json"
             if auto_metrics.exists():
                 metrics_arg = auto_metrics
-        html = build_html(md_path, company=args.company, ticker=args.ticker, version=args.version,
+        html = build_html(md_path, company=args.company, ticker=args.ticker,
                           metrics_path=metrics_arg)
     except Exception as e:
         print(f"❌ 构建失败: {e}", file=sys.stderr)
