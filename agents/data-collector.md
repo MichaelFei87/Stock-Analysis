@@ -71,7 +71,7 @@ python3 -m scripts.capital_flow {ticker} --days 60 --out output/{company}/capita
 python3 -m scripts.technical_analysis {ticker} --name {company} --daily output/{company}/raw_data/daily.parquet --out output/{company}/technical_analysis.md
 
 # 全部市场
-python3 -m scripts.derived_metrics output/{company}/raw_data --market a  # market=a/us/hk
+python3 -m scripts.derived_metrics output/{company}/raw_data --market {market}  # market=a/us/hk
 
 # ★ v5.1.5 — 港股/美股：将 yfinance 格式回填为 Tushare 格式（必须在 data_snapshot 和 financial_audit 之前）
 # 从 income_annual.parquet 等 → 生成 income.parquet 等 Tushare 兼容格式
