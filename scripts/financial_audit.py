@@ -337,12 +337,22 @@ def _altman(bundle: dict) -> list[RedFlag]:
          + 0.6 * mv / tl
          + 1.0 * rev / ta)
 
+    # v5.1.5: When key inputs are missing (MV=0 or RE=0), the Z-Score formula
+    # is structurally unreliable — common for HK/US stocks (yfinance lacks
+    # total_mv / undistr_porfit) and non-manufacturing companies (internet,
+    # finance, platform). Cap severity at ℹ️ to avoid false 🔴 致命.
+    formula_degraded = (mv == 0 or re == 0)
+
     if z < 1.81:
-        sev = "🔴 致命"
+        sev = "ℹ️ 信息" if formula_degraded else "🔴 致命"
         implication = "Z < 1.81，处于破产风险区（Altman 经典阈值）"
+        if formula_degraded:
+            implication += "；⚠️ 公式降级(MV=0或RE=0缺失)，结论不可靠，仅供参考"
     elif z < 2.99:
-        sev = "🟠 高"
+        sev = "ℹ️ 信息" if formula_degraded else "🟠 高"
         implication = "Z ∈ [1.81, 2.99)，灰色地带，财务健康警示"
+        if formula_degraded:
+            implication += "；⚠️ 公式降级(MV=0或RE=0缺失)，结论不可靠"
     else:
         sev = "🟢 低"
         implication = "Z ≥ 2.99，财务健康度安全"
