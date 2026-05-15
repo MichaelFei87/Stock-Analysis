@@ -44,7 +44,9 @@ Sub-agent 的工作目录**不可预测**,因此:
 
 1. **主 agent 在调度前**,用 Bash 获取 skill root 绝对路径:
    ```bash
-   SKILL_ROOT=$(cd /Users/michaelfei_0/.claude/skills/stock-analyze && pwd)
+   SKILL_ROOT=$(cd "$(dirname "$(readlink -f "$0" 2>/dev/null || echo "$0")")/../.." && pwd)
+   # 或更简单: 主 agent 用 Bash 在调度前动态获取
+   # SKILL_ROOT=$(cd ~/.claude/skills/stock-analyze && pwd)
    ```
 2. **所有 sub-agent prompt 中的文件路径必须使用绝对路径**,例如:
    ```
