@@ -314,7 +314,6 @@ def build_html(
         "{{market_cap}}": market_cap,
         "{{pb}}": pb,
         "{{anchor_price}}": anchor_price,
-        "{{skill_version}}": version,
     }
     for k, v in replacements.items():
         html = html.replace(k, str(v))
