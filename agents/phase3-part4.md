@@ -33,6 +33,7 @@ model: inherit
 
 ## 核心约束
 
+- ★ **禁止外链引用**：报告正文中严禁出现 "详见 xxx.md"、"参见 xxx.md"、"见附件" 等指向外部文件的引用。audit_report.md 中的红旗内容必须**内联摘录**到 §十一 正文中，而非用 "详见 audit_report.md" 替代。违反此规则会触发 anti_lazy_lint Rule 1 失败。
 - ★ **章节标题逐字复制 skeleton**(见 `references/agent-protocol.md` §5.1,违反触发 Phase 6 修正循环)
 
 - ★ §九 DCF 4 情景概率分布合理(常见 25/45/25/5,极端 10/80/8/2 警告)
