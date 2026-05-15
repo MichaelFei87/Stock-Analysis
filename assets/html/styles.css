@@ -1,18 +1,19 @@
 /* ============================================================
-   Claude Code Company Analysis · Report Styles v4.6
+   Claude Code Company Analysis · Report Styles v5.0
    单一 CSS 真相源 — 由 assets/html/base.html 加载并内联
    禁止在 Phase 6 Part B 中自创颜色值或变量名
-   v4.6: Goldman 蓝调 + Morningstar 卡片化 + Bloomberg 风险等级
+   v5.0: Claude Design Language — 温暖羊皮纸 + 赤陶色主调 + 衬线标题
+         Bloomberg 风险色保留(红/琥珀/黄/绿)
    ============================================================ */
 
 :root {
-  /* 主色 — Goldman 深蓝 */
-  --c-primary: #1a56db;
-  --c-primary-light: #e8effc;
-  --c-primary-dark: #0f3d99;
-  --c-accent: #d97f3c;
+  /* 主色 — Claude Terracotta */
+  --c-primary: #c96442;
+  --c-primary-light: #f0eee6;
+  --c-primary-dark: #a14e2f;
+  --c-accent: #d97757;
 
-  /* Bloomberg 风格风险等级(高对比) */
+  /* Bloomberg 风格风险等级(高对比) — 保留不变 */
   --c-risk-red:    #dc2626;
   --c-risk-red-bg: #fef2f2;
   --c-risk-amber:  #e8a33a;
@@ -30,30 +31,38 @@
   --c-red: var(--c-risk-red);
   --c-red-bg: var(--c-risk-red-bg);
 
-  /* 灰度系 */
-  --c-gray-50:  #f9fafb;
-  --c-gray-100: #f3f4f6;
-  --c-gray-200: #e5e7eb;
-  --c-gray-500: #6b7280;
-  --c-gray-700: #374151;
-  --c-gray-900: #111827;
+  /* Claude 暖灰度系 */
+  --c-gray-50:  #faf9f5;  /* Ivory */
+  --c-gray-100: #f0eee6;  /* Border Cream */
+  --c-gray-200: #e8e6dc;  /* Border Warm */
+  --c-gray-500: #87867f;  /* Stone Gray */
+  --c-gray-700: #5e5d59;  /* Olive Gray */
+  --c-gray-900: #141413;  /* Near Black */
 
-  /* Morningstar 卡片化灰阶 */
-  --c-card-border:  #e5e7eb;
-  --c-card-header:  #f9fafb;
-  --c-card-hover:   rgba(26,86,219,0.04);
+  /* Claude 表面色 */
+  --c-parchment: #f5f4ed;
+  --c-ivory: #faf9f5;
+  --c-warm-sand: #e8e6dc;
+  --c-dark-surface: #30302e;
+  --c-warm-silver: #b0aea5;
+  --c-dark-warm: #3d3d3a;
 
-  /* 形状 */
+  /* Morningstar 卡片化 — 迁移到暖色 */
+  --c-card-border:  #e8e6dc;
+  --c-card-header:  #faf9f5;
+  --c-card-hover:   rgba(201,100,66,0.04);
+
+  /* 形状 — Claude ring shadow 系统 */
   --radius: 12px;
-  --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
-  --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
-  --shadow-lg: 0 10px 25px rgba(0,0,0,.08), 0 4px 10px rgba(0,0,0,.05);
+  --shadow: 0px 0px 0px 1px #e8e6dc;
+  --shadow-md: 0px 0px 0px 1px #d1cfc5;
+  --shadow-lg: rgba(0,0,0,0.05) 0px 4px 24px;
 
-  /* Variant Perception 紫 */
+  /* Variant Perception 紫 — 保留 */
   --c-variant: #7a4dab;
   --c-variant-bg: #f3eeff;
 
-  /* v4.6 sidebar 布局 */
+  /* v4.6 sidebar 布局(弃用但保持兼容) */
   --sidebar-width: 260px;
   --sidebar-gap: 24px;
 }
@@ -63,12 +72,18 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                "PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
-  background: var(--c-gray-50);
+  background: var(--c-parchment);
   color: var(--c-gray-900);
   margin: 0;
   padding: 0;
   line-height: 1.7;
   font-size: 15px;
+}
+
+/* Claude 衬线标题族 */
+h1, h2, h3 {
+  font-family: Georgia, "Noto Serif SC", "Songti SC", serif;
+  font-weight: 500;
 }
 
 .container {
@@ -89,70 +104,91 @@ body {
   padding: 0 24px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  background: rgba(255,255,255,0.85);
+  background: rgba(245,244,237,0.85);
   border-bottom: 1px solid var(--c-gray-200);
   font-size: 14px;
 }
 .top-nav .nav-brand {
-  font-weight: 700;
+  font-family: Georgia, "Noto Serif SC", serif;
+  font-weight: 500;
   color: var(--c-primary);
   text-decoration: none;
   margin-right: auto;
+  font-size: 15px;
 }
 .top-nav a {
   color: var(--c-gray-700);
   text-decoration: none;
   padding: 6px 10px;
-  border-radius: 6px;
-  transition: background .15s;
+  border-radius: 8px;
+  transition: background .15s, color .15s;
 }
-.top-nav a:hover { background: var(--c-primary-light); color: var(--c-primary); }
+.top-nav a:hover {
+  background: rgba(201,100,66,0.08);
+  color: var(--c-primary);
+}
 
 /* ---------- Header Hero ---------- */
 header.hero {
-  background: linear-gradient(135deg, var(--c-primary), #2a6ba0);
-  color: white;
+  background: var(--c-gray-900);
+  color: var(--c-ivory);
   padding: 48px 32px;
-  border-radius: var(--radius);
+  border-radius: 16px;
   margin-bottom: 32px;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
 }
-header.hero h1 { font-size: 32px; margin: 0 0 8px; font-weight: 700; }
-header.hero .subtitle { opacity: 0.9; font-size: 15px; }
+header.hero h1 {
+  font-size: 32px;
+  margin: 0 0 8px;
+  font-weight: 500;
+  line-height: 1.15;
+  color: var(--c-ivory);
+}
+header.hero .subtitle {
+  color: var(--c-warm-silver);
+  font-size: 15px;
+}
 header.hero .meta {
   display: flex; flex-wrap: wrap; gap: 24px;
   margin-top: 20px; font-size: 14px;
+  color: var(--c-warm-silver);
 }
 
 /* ---------- Section (每个 §一到§十五 一个) ---------- */
 .section {
-  background: white;
+  background: var(--c-ivory);
   padding: 28px 32px;
   margin: 20px 0;
   border-radius: var(--radius);
-  border: 1px solid var(--c-gray-200);
+  border: 1px solid var(--c-gray-100);
   box-shadow: var(--shadow);
 }
 .section h2 {
+  font-family: Georgia, "Noto Serif SC", "Songti SC", serif;
   color: var(--c-primary);
-  border-bottom: 2px solid var(--c-primary-light);
+  border-bottom: 2px solid rgba(201,100,66,0.15);
   padding-bottom: 8px;
   margin-top: 0;
   font-size: 22px;
+  font-weight: 500;
+  line-height: 1.25;
 }
 .section h3 {
-  color: var(--c-primary);
+  font-family: Georgia, "Noto Serif SC", "Songti SC", serif;
+  color: var(--c-gray-900);
   font-size: 18px;
+  font-weight: 500;
   margin-top: 24px;
   border-bottom: 1px dashed var(--c-gray-200);
   padding-bottom: 4px;
+  line-height: 1.3;
 }
 .section h4 { color: var(--c-gray-900); font-size: 16px; margin-top: 18px; }
 
 /* Variant Perception 章节专用紫色强调 */
 .section.variant-perception {
   border-left: 4px solid var(--c-variant);
-  background: linear-gradient(to right, var(--c-variant-bg) 0%, white 3%);
+  background: linear-gradient(to right, var(--c-variant-bg) 0%, var(--c-ivory) 3%);
 }
 .section.variant-perception h2 {
   color: var(--c-variant);
@@ -177,6 +213,7 @@ header.hero .meta {
   font-size: 32px;
   font-weight: 700;
   color: var(--c-primary);
+  font-family: Georgia, "Noto Serif SC", serif;
 }
 .score-ring .score-text .label {
   font-size: 11px;
@@ -193,7 +230,12 @@ header.hero .meta {
   font-size: 14px;
 }
 .dimension-bar .dim-name { color: var(--c-gray-700); }
-.dimension-bar .dim-score { font-weight: 600; text-align: right; color: var(--c-primary); }
+.dimension-bar .dim-score {
+  font-weight: 600;
+  text-align: right;
+  color: var(--c-primary);
+  font-family: Georgia, "Noto Serif SC", serif;
+}
 .dimension-bar .dim-progress {
   height: 10px;
   background: var(--c-gray-100);
@@ -201,9 +243,9 @@ header.hero .meta {
   overflow: hidden;
 }
 .dimension-bar .dim-progress .fill { height: 100%; border-radius: 5px; }
-.dimension-bar .dim-progress .fill.tier1 { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+.dimension-bar .dim-progress .fill.tier1 { background: linear-gradient(90deg, var(--c-primary), var(--c-primary-dark)); }
 .dimension-bar .dim-progress .fill.tier2 { background: linear-gradient(90deg, #8b5cf6, #6d28d9); }
-.dimension-bar .dim-progress .fill.tier3 { background: linear-gradient(90deg, #f59e0b, #d97706); }
+.dimension-bar .dim-progress .fill.tier3 { background: linear-gradient(90deg, var(--c-accent), var(--c-primary)); }
 .dimension-bar .dim-weight { text-align: right; color: var(--c-gray-500); font-size: 12px; }
 
 /* ---------- 3.4 三色情景卡片 ---------- */
@@ -215,11 +257,16 @@ header.hero .meta {
 }
 .scenario {
   padding: 16px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border-left: 4px solid;
 }
 .scenario .label { font-size: 12px; color: var(--c-gray-500); text-transform: uppercase; letter-spacing: 1px; }
-.scenario .big-num { font-size: 28px; font-weight: 700; margin: 4px 0 8px; }
+.scenario .big-num {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 4px 0 8px;
+  font-family: Georgia, "Noto Serif SC", serif;
+}
 .scenario .detail { font-size: 13px; color: var(--c-gray-700); }
 .scenario.bull { background: var(--c-green-bg); border-left-color: var(--c-green); }
 .scenario.bull .big-num { color: var(--c-green); }
@@ -227,24 +274,28 @@ header.hero .meta {
 .scenario.base .big-num { color: var(--c-yellow); }
 .scenario.bear { background: var(--c-red-bg); border-left-color: var(--c-red); }
 .scenario.bear .big-num { color: var(--c-red); }
-.scenario.tail { background: #2a2a2a; border-left-color: #000; color: #fff; }
-.scenario.tail .big-num { color: #fff; }
-.scenario.tail .detail { color: #ddd; }
+.scenario.tail { background: var(--c-dark-surface); border-left-color: var(--c-gray-900); color: var(--c-ivory); }
+.scenario.tail .big-num { color: var(--c-ivory); }
+.scenario.tail .detail { color: var(--c-warm-silver); }
 
 /* ---------- 3.5 期望回报高亮条 ---------- */
 .expected-return {
-  background: linear-gradient(135deg, #1e3a5f, var(--c-primary));
-  color: white;
+  background: linear-gradient(135deg, var(--c-gray-900), var(--c-primary-dark));
+  color: var(--c-ivory);
   padding: 20px 28px;
-  border-radius: var(--radius);
+  border-radius: 16px;
   margin: 20px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
 }
-.expected-return .label { font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
-.expected-return .value { font-size: 36px; font-weight: 700; }
+.expected-return .label { font-size: 12px; color: var(--c-warm-silver); text-transform: uppercase; letter-spacing: 1px; }
+.expected-return .value {
+  font-size: 36px;
+  font-weight: 700;
+  font-family: Georgia, "Noto Serif SC", serif;
+}
 
 /* ---------- 3.6 团队名片网格 ---------- */
 .team-grid {
@@ -256,14 +307,16 @@ header.hero .meta {
 .team-card {
   padding: 16px;
   border: 1px solid var(--c-gray-200);
-  border-radius: 8px;
+  border-radius: var(--radius);
   text-align: center;
+  background: var(--c-ivory);
 }
 .team-card .avatar {
   width: 48px; height: 48px; border-radius: 50%;
-  background: var(--c-primary-light); color: var(--c-primary);
+  background: rgba(201,100,66,0.1); color: var(--c-primary);
   display: flex; align-items: center; justify-content: center;
   font-weight: 700; margin: 0 auto 8px; font-size: 18px;
+  font-family: Georgia, "Noto Serif SC", serif;
 }
 .team-card .name { font-weight: 600; }
 .team-card .role { color: var(--c-gray-500); font-size: 13px; margin-top: 4px; }
@@ -277,7 +330,7 @@ header.hero .meta {
   padding: 12px;
   border-left: 4px solid;
   background: var(--c-gray-50);
-  border-radius: 6px;
+  border-radius: 8px;
   margin: 8px 0;
 }
 .risk-item.high   { border-left-color: var(--c-red);    background: var(--c-red-bg); }
@@ -310,7 +363,10 @@ header.hero .meta {
   width: 14px; height: 14px; border-radius: 50%;
   background: var(--c-gray-200); display: block; margin: 0 auto 8px;
 }
-.timeline .tl-node.current::before { background: var(--c-primary); box-shadow: 0 0 0 4px var(--c-primary-light); }
+.timeline .tl-node.current::before {
+  background: var(--c-primary);
+  box-shadow: 0 0 0 4px rgba(201,100,66,0.15);
+}
 .timeline .tl-node .year { font-size: 12px; color: var(--c-gray-500); }
 .timeline .tl-node .round { font-weight: 600; font-size: 13px; }
 .timeline .tl-node .amount { font-size: 11px; color: var(--c-gray-700); }
@@ -338,9 +394,9 @@ header.hero .meta {
   white-space: nowrap;
   font-size: 11px;
   background: var(--c-gray-900);
-  color: white;
+  color: var(--c-ivory);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 /* ---------- v2 组件 · 估值区间可视化 ---------- */
@@ -348,13 +404,13 @@ header.hero .meta {
   position: relative;
   height: 28px;
   background: var(--c-gray-100);
-  border-radius: 4px;
+  border-radius: 6px;
   margin: 10px 0;
 }
 .valuation-range .range {
   position: absolute;
   top: 4px; bottom: 4px;
-  border-radius: 3px;
+  border-radius: 4px;
   opacity: 0.6;
 }
 .valuation-range .range.dcf { background: var(--c-primary); }
@@ -369,7 +425,7 @@ header.hero .meta {
 }
 
 /* ---------- v2 组件 · 星级评估 ---------- */
-.star-filled { color: var(--c-yellow); }
+.star-filled { color: var(--c-accent); }
 .star-empty  { color: var(--c-gray-200); }
 
 /* ---------- v2 组件 · 信息缺口优先级 badge ---------- */
@@ -397,7 +453,7 @@ th, td {
   text-align: left;
 }
 th {
-  background: var(--c-primary-light);
+  background: var(--c-gray-100);
   color: var(--c-primary);
   font-weight: 600;
 }
@@ -408,16 +464,15 @@ strong { color: var(--c-gray-900); font-weight: 600; }
 code {
   background: var(--c-gray-100);
   padding: 2px 6px;
-  border-radius: 3px;
+  border-radius: 4px;
   font-size: 12px;
 }
 blockquote {
   border-left: 4px solid var(--c-primary);
-  padding-left: 16px;
-  color: var(--c-gray-700);
-  background: var(--c-primary-light);
   padding: 10px 16px;
-  border-radius: 4px;
+  color: var(--c-gray-700);
+  background: rgba(201,100,66,0.05);
+  border-radius: 8px;
   margin: 12px 0;
 }
 hr { border: none; border-top: 1px dashed var(--c-gray-200); margin: 24px 0; }
@@ -426,9 +481,9 @@ li { margin: 4px 0; }
 a {
   color: var(--c-primary);
   text-decoration: none;
-  border-bottom: 1px dotted;
+  border-bottom: 1px dotted rgba(201,100,66,0.3);
 }
-a:hover { color: var(--c-yellow); }
+a:hover { color: var(--c-accent); }
 
 footer {
   text-align: center;
@@ -451,10 +506,10 @@ footer {
 }
 
 /* ============================================================
-   v4.6 新增: 6 个大厂风格组件
+   v4.6 新增: 6 个大厂风格组件 (迁移至 Claude 设计语言)
    ============================================================ */
 
-/* ---------- v4.6-1. 前置评级卡 (Goldman 三件套) ---------- */
+/* ---------- v4.6-1. 前置评级卡 ---------- */
 .rating-trio {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -462,15 +517,18 @@ footer {
   margin: -16px 0 32px;
 }
 .rating-card {
-  background: white;
+  background: var(--c-ivory);
   border: 1px solid var(--c-card-border);
-  border-top: 4px solid var(--c-primary);
+  border-top: 3px solid var(--c-primary);
   border-radius: var(--radius);
   padding: 20px 24px;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow);
   transition: transform .15s, box-shadow .15s;
 }
-.rating-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.rating-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
 .rating-card--score  { border-top-color: var(--c-primary); }
 .rating-card--anchor { border-top-color: var(--c-accent); }
 .rating-card--return { border-top-color: var(--c-risk-green); }
@@ -486,10 +544,11 @@ footer {
 }
 .rating-card .value {
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--c-gray-900);
   line-height: 1.2;
   margin-bottom: 6px;
+  font-family: Georgia, "Noto Serif SC", serif;
 }
 .rating-card .value .out-of {
   font-size: 16px;
@@ -503,7 +562,7 @@ footer {
   color: var(--c-gray-700);
 }
 
-/* ---------- v4.6-2. 彩条风险卡 (Bloomberg 等级色) ---------- */
+/* ---------- v4.6-2. 彩条风险卡 (Bloomberg 等级色保留) ---------- */
 .risk-card-v2 {
   display: grid;
   grid-template-columns: 4px 1fr auto;
@@ -511,17 +570,17 @@ footer {
   align-items: center;
   padding: 14px 16px 14px 0;
   margin: 8px 0;
-  background: white;
+  background: var(--c-ivory);
   border: 1px solid var(--c-card-border);
   border-radius: var(--radius);
   overflow: hidden;
   transition: background .15s;
 }
 .risk-card-v2:hover { background: var(--c-card-hover); }
-.risk-card-v2.risk-critical { border-left-width: 0; background: linear-gradient(to right, var(--c-risk-red-bg) 0%, white 6%); }
-.risk-card-v2.risk-high     { background: linear-gradient(to right, var(--c-risk-amber-bg) 0%, white 6%); }
-.risk-card-v2.risk-medium   { background: linear-gradient(to right, var(--c-risk-yellow-bg) 0%, white 6%); }
-.risk-card-v2.risk-low      { background: linear-gradient(to right, var(--c-risk-green-bg) 0%, white 6%); }
+.risk-card-v2.risk-critical { border-left-width: 0; background: linear-gradient(to right, var(--c-risk-red-bg) 0%, var(--c-ivory) 6%); }
+.risk-card-v2.risk-high     { background: linear-gradient(to right, var(--c-risk-amber-bg) 0%, var(--c-ivory) 6%); }
+.risk-card-v2.risk-medium   { background: linear-gradient(to right, var(--c-risk-yellow-bg) 0%, var(--c-ivory) 6%); }
+.risk-card-v2.risk-low      { background: linear-gradient(to right, var(--c-risk-green-bg) 0%, var(--c-ivory) 6%); }
 .risk-card-v2 .left-bar { align-self: stretch; width: 4px; }
 .risk-card-v2.risk-critical .left-bar { background: var(--c-risk-red); }
 .risk-card-v2.risk-high     .left-bar { background: var(--c-risk-amber); }
@@ -538,11 +597,11 @@ footer {
 .risk-card-v2.risk-medium   .sev-badge { background: var(--c-risk-yellow); color: var(--c-gray-900); }
 .risk-card-v2.risk-low      .sev-badge { background: var(--c-risk-green);  color: white; }
 
-/* ---------- v4.6.2. Preamble 区 (hero 之后、rating-trio 之前) ---------- */
+/* ---------- v4.6.2. Preamble 区 ---------- */
 .preamble {
-  background: var(--c-gray-50);
+  background: var(--c-ivory);
   border-left: 3px solid var(--c-accent);
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 14px 20px;
   margin: -8px 0 20px;
   font-size: 13px;
@@ -560,16 +619,16 @@ footer {
 .preamble blockquote p { margin: 6px 0; }
 .preamble p { margin: 6px 0; }
 .preamble strong { color: var(--c-primary-dark); }
-.preamble hr { display: none; }  /* 吃掉 --- 分隔符,避免视觉噪音 */
+.preamble hr { display: none; }
 
-/* ---------- v4.6.1. 关键指标横排面板 (顶部, 替代 v4.6 的粘性侧边栏) ---------- */
+/* ---------- v4.6.1. 关键指标横排面板 ---------- */
 .metric-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 10px;
   margin: 0 0 24px;
   padding: 16px;
-  background: white;
+  background: var(--c-ivory);
   border: 1px solid var(--c-card-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -593,6 +652,7 @@ footer {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--c-gray-900);
+  font-family: Georgia, "Noto Serif SC", serif;
 }
 .metric-strip .metric-chip .metric-value.positive { color: var(--c-risk-green); }
 .metric-strip .metric-chip .metric-value.negative { color: var(--c-risk-red); }
@@ -600,10 +660,9 @@ footer {
 .metric-strip .metric-chip .metric-value.critical { color: var(--c-risk-red); font-weight: 900; }
 .metric-strip .metric-chip .metric-value.neutral  { color: var(--c-gray-900); }
 
-/* ---------- v4.6 兼容: .metric-sidebar/metric-row 保留(弃用但不破坏存量报告) ---------- */
+/* ---------- v4.6 兼容: .metric-sidebar/metric-row 保留 ---------- */
 .metric-sidebar {
-  /* 降级为块式显示, 不再粘性 */
-  background: white;
+  background: var(--c-ivory);
   border: 1px solid var(--c-card-border);
   border-radius: var(--radius);
   padding: 20px 18px;
@@ -636,12 +695,12 @@ footer {
 .metric-sidebar .metric-row strong.risk     { color: var(--c-risk-amber); font-weight: 800; }
 .metric-sidebar .metric-row strong.critical { color: var(--c-risk-red);   font-weight: 800; }
 
-/* ---------- v4.6-4. 对标卡 (Morningstar 3 列比较) ---------- */
+/* ---------- v4.6-4. 对标卡 ---------- */
 .comparison-card {
   display: grid;
   grid-template-columns: 1fr 1.3fr 1fr;
   gap: 8px;
-  background: white;
+  background: var(--c-ivory);
   border: 1px solid var(--c-card-border);
   border-radius: var(--radius);
   padding: 16px;
@@ -653,11 +712,17 @@ footer {
   border-radius: 8px;
 }
 .comparison-card .cmp-col.center {
-  background: var(--c-primary-light);
+  background: rgba(201,100,66,0.06);
   border: 2px solid var(--c-primary);
 }
 .comparison-card .cmp-label { font-size: 10px; color: var(--c-gray-500); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 6px; }
-.comparison-card .cmp-value { font-size: 20px; font-weight: 800; color: var(--c-gray-900); font-variant-numeric: tabular-nums; }
+.comparison-card .cmp-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--c-gray-900);
+  font-variant-numeric: tabular-nums;
+  font-family: Georgia, "Noto Serif SC", serif;
+}
 .comparison-card .cmp-col.center .cmp-value { font-size: 24px; color: var(--c-primary); }
 .comparison-card .cmp-sub { font-size: 11px; color: var(--c-gray-500); margin-top: 4px; }
 .comparison-card .cmp-bar {
@@ -670,14 +735,14 @@ footer {
   border-radius: 3px;
 }
 
-/* ---------- v4.6-5. 深度链接 (章节间跳转) ---------- */
+/* ---------- v4.6-5. 深度链接 ---------- */
 .deep-link {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   padding: 1px 8px 1px 6px;
   font-size: 11px;
-  background: var(--c-primary-light);
+  background: rgba(201,100,66,0.08);
   color: var(--c-primary);
   border: 1px solid transparent;
   border-radius: 12px;
@@ -689,10 +754,10 @@ footer {
 .deep-link::before { content: '→'; opacity: .6; }
 .deep-link:hover {
   background: var(--c-primary);
-  color: white;
+  color: var(--c-ivory);
   border-color: var(--c-primary);
 }
-/* Target 高亮(用户点击内链跳到目标章节时) */
+/* Target 高亮 */
 .section:target {
   animation: target-pulse 1.8s ease-out;
   scroll-margin-top: 70px;
@@ -702,7 +767,7 @@ footer {
   100% { box-shadow: var(--shadow); }
 }
 
-/* ---------- v4.6-6. 微型热力图 (纯 CSS 色块网格) ---------- */
+/* ---------- v4.6-6. 微型热力图 ---------- */
 .heatmap-grid {
   display: grid;
   gap: 2px;
@@ -715,15 +780,15 @@ footer {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
+  border-radius: 6px;
   font-family: ui-monospace, monospace;
   font-weight: 600;
   color: var(--c-gray-900);
 }
-/* 5 档颜色映射 (深红 → 白 → 深绿) */
+/* 5 档颜色映射 */
 .heatmap-grid .hm-cell.hm--2 { background: #fca5a5; color: #7f1d1d; }
 .heatmap-grid .hm-cell.hm--1 { background: #fed7aa; color: #7c2d12; }
-.heatmap-grid .hm-cell.hm-0  { background: #f3f4f6; }
+.heatmap-grid .hm-cell.hm-0  { background: var(--c-gray-100); }
 .heatmap-grid .hm-cell.hm-1  { background: #bbf7d0; color: #14532d; }
 .heatmap-grid .hm-cell.hm-2  { background: #4ade80; color: white; }
 .heatmap-grid .hm-cell:hover { transform: scale(1.1); }
