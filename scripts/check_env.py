@@ -8,7 +8,7 @@ from __future__ import annotations
 import importlib
 import sys
 
-REQUIRED_PKGS = ["tushare", "yfinance", "pypdf", "pandas", "pyarrow", "requests"]
+REQUIRED_PKGS = ["tushare", "yfinance", "pypdf", "pandas", "pyarrow", "requests", "numpy"]
 
 
 def check() -> int:
