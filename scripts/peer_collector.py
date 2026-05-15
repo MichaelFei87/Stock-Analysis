@@ -4,8 +4,8 @@
 行业自动采集同行业市值相近的 Top N peer, 并对比关键财务指标.
 
 核心流程:
-1. 查目标公司 industry (Tushare stock_basic)
-2. 拉同行业全部上市公司 (pro.stock_basic(industry=X, list_status='L'))
+1. 查目标公司申万三级行业 (Tushare index_member_all), fallback 到 stock_basic.industry
+2. 拉同行业全部上市公司成分股
 3. 按总市值相近度排序, 取 Top N (默认 5)
 4. 批量拉 peer 的 fina_indicator 最新期 + daily_basic 最新日
 5. 生成对比表 markdown: peer_analysis.md
@@ -22,7 +22,7 @@ Usage:
 限制:
 - 只支持 A 股 (Tushare 核心覆盖面)
 - 海外 peer (Infineon/STMicro 等) 需 LLM 手工补到 Phase 3 §八
-- 行业分类用 Tushare 的 industry 字段 (申万三级, 较细粒度)
+- 行业分类优先用 Tushare index_member_all (申万三级), fallback 到 stock_basic.industry
 """
 from __future__ import annotations
 
@@ -54,6 +54,40 @@ COMPARE_FIELDS = [
     ("revenue_yoy",         "营收 YoY(%)"),
     ("dv_ratio",            "股息率(%)"),
 ]
+
+
+# ---------- 辅助: 申万三级行业精确 peer (v5.2.0) ----------
+
+
+def _get_sw_l3_peers(pro, target_code: str) -> pd.DataFrame | None:
+    """通过 Tushare index_member_all 获取目标公司的申万三级行业成分股。
+
+    流程:
+    1. 用 ts_code 查目标公司的 l3_code (申万三级行业代码)
+    2. 用 l3_code 拉同行业全部当前成分股 (is_new='Y')
+    返回 DataFrame(ts_code, name, l3_code, l3_name) 或 None(API 不可用时)。
+    """
+    try:
+        # 查目标公司所属申万三级行业
+        target_cls = pro.index_member_all(ts_code=target_code, is_new="Y")
+        if target_cls is None or target_cls.empty:
+            return None
+        l3_code = target_cls.iloc[0]["l3_code"]
+        l3_name = target_cls.iloc[0]["l3_name"]
+        if not l3_code or pd.isna(l3_code):
+            return None
+
+        # 拉同三级行业全部成分股
+        members = pro.index_member_all(l3_code=l3_code, is_new="Y")
+        if members is None or members.empty:
+            return None
+
+        result = members[["ts_code", "name", "l3_code", "l3_name"]].copy()
+        print(f"[peer_collector] 申万L3: {l3_name} ({l3_code}), 成分股 {len(result)} 家")
+        return result
+    except Exception as e:
+        print(f"[peer_collector] index_member_all 不可用, fallback 到 industry 字段: {e}")
+        return None
 
 
 # ---------- 辅助: 最近交易日 ----------
@@ -98,13 +132,26 @@ def collect_peers(
     if not industry or pd.isna(industry):
         raise RuntimeError(f"{target_code} 行业字段为空, 无法做 peer 采集")
 
-    # 2. 拉全市场 stock_basic 后本地过滤 (Tushare industry 参数可能不严格过滤)
+    # 2. v5.2.0: 优先用申万三级行业精确匹配, fallback 到 stock_basic.industry
+    sw_peers = _get_sw_l3_peers(pro, target_code)
+
+    # 拉全市场 stock_basic (无论走哪条路都需要 name/industry 等字段)
     all_stocks = pro.stock_basic(
         exchange="",
         list_status="L",
         fields="ts_code,symbol,name,industry,list_date,market",
     )
-    all_peers = all_stocks[all_stocks["industry"] == industry].copy()
+
+    if sw_peers is not None and len(sw_peers) >= 3:
+        # 申万三级成功: 用成分股 ts_code 过滤
+        sw_codes = set(sw_peers["ts_code"].tolist())
+        all_peers = all_stocks[all_stocks["ts_code"].isin(sw_codes)].copy()
+        # 更新 industry 为申万三级名称 (用于后续展示)
+        industry = sw_peers.iloc[0]["l3_name"]
+    else:
+        # Fallback: stock_basic.industry 字段
+        all_peers = all_stocks[all_stocks["industry"] == industry].copy()
+
     if len(all_peers) < 2:
         raise RuntimeError(f"行业 '{industry}' 上市公司不足 2 家, 无法做 peer 对比")
 
@@ -116,8 +163,10 @@ def collect_peers(
     )
     merged = all_peers.merge(basic_day, on="ts_code", how="left")
     merged = merged.dropna(subset=["total_mv"])
-    # 再次保险: 确保 industry 严格相同
-    merged = merged[merged["industry"] == industry]
+    # 注: 走申万 L3 路径时 all_peers 已是精确成分股, 无需再按 industry 字段过滤
+    if sw_peers is None or len(sw_peers) < 3:
+        # 仅 fallback 路径才需保险过滤
+        merged = merged[merged["industry"] == industry]
     # total_mv tushare 单位是万元 → 转亿
     merged["total_mv_yi"] = merged["total_mv"] / 10000
 

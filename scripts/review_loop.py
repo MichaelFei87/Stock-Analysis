@@ -82,9 +82,11 @@ def parse_reviewer_response(text: str) -> dict:
     if m:
         judgment = m.group(1)
 
-    # FIX 列表
-    fix_lines = re.findall(r"^- \[FIX-P[1-5]-§[^\]]+\] .+ → .+$",
-                           text, re.MULTILINE)
+    # FIX 列表 (空格在 → 两侧可选; 也兼容半角 ->)
+    fix_lines = re.findall(
+        r"^- \[FIX-P[1-5]-§[^\]]+\]\s*.+?\s*(?:→|->)\s*.+$",
+        text, re.MULTILINE,
+    )
 
     return {"judgment": judgment, "fixes": fix_lines}
 
