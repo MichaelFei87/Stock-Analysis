@@ -10,7 +10,7 @@
 > 无 API key 时自动跳过,fallback 到 WebSearch。
 
 > **v3 重大调整**：本文件从 v1/v2 的"主数据源"降级为**辅助定位**工具。
-> 主数据源是 `scripts/tushare_collector.py` 和 `scripts/pdf_reader.py`，见 `phases/phase1-data-collection.md`。
+> 主数据源是 `scripts/tushare_collector.py` 和 `scripts/pdf_reader.py`，见 `agents/data-collector.md`。
 >
 > WebSearch 只用于：**舆情 / 新闻事件 / 行业背景 / PDF URL 定位**。
 > **禁止**用于关键财务数据（收入、利润、PE、PB、ROE 等）——这些必须来自 Tushare API 或 PDF 原文。
@@ -137,7 +137,7 @@ v3 的铁律是：**关键数据必须有可审计的原文锚点**。Tushare �
 ## 查询模板速查
 
 ### 创业公司（非上市）
-创业公司没有 Tushare / PDF，只能靠 WebSearch。参考 `phases/phase1-data-collection.md` §7 "创业公司模式"。
+创业公司没有 Tushare / PDF，只能靠 WebSearch。参考 `agents/data-collector.md` "创业公司模式"。
 
 ### 条款 / 交易
 ```

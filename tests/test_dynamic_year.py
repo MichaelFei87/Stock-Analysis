@@ -36,7 +36,7 @@ def calc_latest_quarterly_desc(today: date) -> str:
 
 def build_search_queries(company: str, ticker: str,
                          latest_annual_fy: int, latest_quarterly_desc: str) -> dict:
-    """复现 agents/data-collector.md Step 3 + phases/phase1-data-collection.md §2.1"""
+    """复现 agents/data-collector.md Step 3A 定位 PDF URL"""
     return {
         "annual": f"site:cninfo.com.cn {ticker} {company} {latest_annual_fy}年年度报告 PDF",
         "quarterly": f"site:cninfo.com.cn {ticker} {company} {latest_quarterly_desc} PDF",
