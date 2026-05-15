@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Claude Code 投资分析 Skill — 一键安装 (v5.1.4)
+# Claude Code 投资分析 Skill — 一键安装
 #
 # 使用方法：
 #   curl -fsSL https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main/install.sh | bash
@@ -12,10 +12,9 @@ set -e
 
 SKILL_DIR="$HOME/.claude/skills/stock-analyze"
 REPO_URL="https://raw.githubusercontent.com/MichaelFei87/Stock-Analysis/main"
-VERSION="5.1.4"
 
 echo "================================================"
-echo "  Claude Code — 投资分析 Skill 安装程序 v${VERSION}"
+echo "  Claude Code — 投资分析 Skill 安装程序"
 echo "  sub-agent 架构 + 结构化数据 + PDF 精析"
 echo "  支持 A 股 / 美股 / 港股"
 echo "================================================"
@@ -140,7 +139,7 @@ SCRIPT_COUNT=$(find "$SKILL_DIR/scripts" -maxdepth 1 -name "*.py" 2>/dev/null | 
 ASSETS_COUNT=$(find "$SKILL_DIR/assets" -type f 2>/dev/null | wc -l | tr -d ' ')
 AGENT_COUNT=$(find "$SKILL_DIR/agents" -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
 
-# v5.1.4 期望: 5 phases + 7 refs + 23 scripts + 7 assets + 9 agents
+# 期望: 5 phases + 7 refs + 23 scripts + 7 assets + 9 agents
 EXPECT_PHASES=5
 EXPECT_REFS=7
 EXPECT_SCRIPTS=23
@@ -157,7 +156,7 @@ ERRORS=""
 if [ -z "$ERRORS" ]; then
     echo ""
     echo "============================================"
-    echo "  ✅ 安装成功！(v${VERSION})"
+    echo "  ✅ 安装成功！"
     echo "============================================"
     echo ""
     echo "  协调器:  SKILL.md"

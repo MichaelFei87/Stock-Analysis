@@ -1,11 +1,10 @@
-# Claude Code 投资分析 Skill (v5.1.4)
+# Claude Code 投资分析 Skill
 
 > **结构化数据 + PDF 原文 + 11 大师框架自动审计** 的专业投资分析技能
 >
 > 支持 A 股 / 美股 / 港股 · 6 阶段流水线 + 量化监控 · 适用于 Anthropic Claude Code
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v5.1.4-blue" alt="version">
   <img src="https://img.shields.io/badge/markets-A%E8%82%A1%20%7C%20%E7%BE%8E%E8%82%A1%20%7C%20%E6%B8%AF%E8%82%A1-green" alt="markets">
   <img src="https://img.shields.io/badge/audit-11%20frameworks-orange" alt="frameworks">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="license">
