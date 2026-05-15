@@ -91,6 +91,14 @@ def _is_empty(path: Path) -> bool:
     return df.empty
 
 
+def _find_src(d: Path, name: str) -> Path:
+    """Try name.parquet first (us_collector output), then yf_name.parquet (legacy)."""
+    p = d / f"{name}.parquet"
+    if p.exists():
+        return p
+    return d / f"yf_{name}.parquet"
+
+
 def _convert_period(df: pd.DataFrame) -> pd.DataFrame:
     """Convert yfinance 'period' column to Tushare 'end_date' (YYYYMMDD string)."""
     if "period" not in df.columns:
@@ -123,9 +131,9 @@ def _apply_map(df: pd.DataFrame, field_map: dict[str, str]) -> pd.DataFrame:
 
 def _build_fina_indicator(raw_data_dir: Path) -> pd.DataFrame:
     """Derive fina_indicator fields from income + balance + cashflow yfinance data."""
-    inc = _read_safe(raw_data_dir / "yf_income_annual.parquet")
-    bs = _read_safe(raw_data_dir / "yf_balance_annual.parquet")
-    cf = _read_safe(raw_data_dir / "yf_cashflow_annual.parquet")
+    inc = _read_safe(_find_src(raw_data_dir, "income_annual"))
+    bs = _read_safe(_find_src(raw_data_dir, "balance_annual"))
+    cf = _read_safe(_find_src(raw_data_dir, "cashflow_annual"))
 
     if inc.empty:
         return pd.DataFrame()
@@ -280,7 +288,7 @@ def backfill_from_yfinance(raw_data_dir: str | Path) -> dict[str, str]:
     # --- income.parquet ---
     target = d / "income.parquet"
     if _is_empty(target):
-        src = _read_safe(d / "yf_income_annual.parquet")
+        src = _read_safe(_find_src(d, "income_annual"))
         if not src.empty:
             df = _convert_period(src)
             df = _apply_map(df, INCOME_MAP)
@@ -297,7 +305,7 @@ def backfill_from_yfinance(raw_data_dir: str | Path) -> dict[str, str]:
     # --- balancesheet.parquet ---
     target = d / "balancesheet.parquet"
     if _is_empty(target):
-        src = _read_safe(d / "yf_balance_annual.parquet")
+        src = _read_safe(_find_src(d, "balance_annual"))
         if not src.empty:
             df = _convert_period(src)
             df = _apply_map(df, BALANCE_MAP)
@@ -311,7 +319,7 @@ def backfill_from_yfinance(raw_data_dir: str | Path) -> dict[str, str]:
     # --- cashflow.parquet ---
     target = d / "cashflow.parquet"
     if _is_empty(target):
-        src = _read_safe(d / "yf_cashflow_annual.parquet")
+        src = _read_safe(_find_src(d, "cashflow_annual"))
         if not src.empty:
             df = _convert_period(src)
             df = _apply_map(df, CASHFLOW_MAP)
