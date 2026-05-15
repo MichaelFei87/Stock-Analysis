@@ -161,10 +161,10 @@ def _build_fina_indicator(raw_data_dir: Path) -> pd.DataFrame:
         if revenue is not None and revenue != 0:
             if gross_profit is not None:
                 r["grossprofit_margin"] = (gross_profit / revenue) * 100
-                r["gross_margin"] = r["grossprofit_margin"]  # alias for §2.4
+                r["gross_margin"] = gross_profit  # Tushare gross_margin = 毛利金额(元)
             elif cogs is not None:
                 r["grossprofit_margin"] = ((revenue - cogs) / revenue) * 100
-                r["gross_margin"] = r["grossprofit_margin"]
+                r["gross_margin"] = revenue - cogs
             if net_income is not None:
                 r["netprofit_margin"] = (net_income / revenue) * 100
 
