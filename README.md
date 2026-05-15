@@ -11,7 +11,7 @@
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="license">
 </p>
 
-**在线报告示例**: [MichaelFei87.github.io/Inves-Report](https://MichaelFei87.github.io/Inves-Report)
+**在线报告示例**: [MichaelFei87.github.io/Stock-Analysis-Reports](https://MichaelFei87.github.io/Stock-Analysis-Reports)
 
 ---
 
@@ -237,15 +237,15 @@ Phase 7 以历史报告的带标签指标为基线，重跑数据层对比变化
 
 ---
 
-## 🗂️ 与 Inves-Report 仓库的关系
+## 🗂️ 与 Stock-Analysis-Reports 仓库的关系
 
 本仓库（`Stock-Analysis`）是 **skill 代码**。
 
-生成的 **分析报告 HTML** 发布在姊妹仓库 [MichaelFei87/Inves-Report](https://github.com/MichaelFei87/Inves-Report)，通过 GitHub Pages 在线浏览：
+生成的 **分析报告 HTML** 发布在姊妹仓库 [MichaelFei87/Stock-Analysis-Reports](https://github.com/MichaelFei87/Stock-Analysis-Reports)，通过 GitHub Pages 在线浏览：
 
-👉 **在线报告**: [MichaelFei87.github.io/Inves-Report](https://MichaelFei87.github.io/Inves-Report)
+👉 **在线报告**: [MichaelFei87.github.io/Stock-Analysis-Reports](https://MichaelFei87.github.io/Stock-Analysis-Reports)
 
-Phase 6 的 Part C 自动把 HTML 推到 Inves-Report 仓库。
+Phase 6 的 Part C 自动把 HTML 推到 Stock-Analysis-Reports 仓库。
 
 ---
 
